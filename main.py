@@ -19,6 +19,8 @@ async def load_cogs():
             await bot.load_extension(f"cogs.{file[:-3]}")
 
 async def main():
+    keep_alive()  # ← ADD THIS LINE
+
     async with bot:
         await load_cogs()
         await bot.start(os.getenv("TOKEN"))
