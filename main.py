@@ -6,7 +6,7 @@ import os
 import asyncio
 
 # ─────────────────────────
-# Flask Web Server
+# Flask Web Server (for Render Web Service)
 # ─────────────────────────
 
 app = Flask(__name__)
@@ -30,11 +30,15 @@ def keep_alive():
 intents = discord.Intents.default()
 intents.message_content = True
 
-bot = commands.Bot(command_prefix=".", intents=intents, help_command=None)
+bot = commands.Bot(
+    command_prefix=".",
+    intents=intents,
+    help_command=None
+)
 
 @bot.event
 async def on_ready():
-    print(f"Logged in as {bot.user}")
+    print(f"✅ Logged in as {bot.user}")
 
 async def load_cogs():
     for file in os.listdir("./cogs"):
@@ -42,10 +46,20 @@ async def load_cogs():
             await bot.load_extension(f"cogs.{file[:-3]}")
 
 async def main():
-    keep_alive()  # start web server first
+    # Start Flask server first
+    keep_alive()
+
+    token = os.getenv("TOKEN")
+
+    if not token:
+        print("❌ TOKEN NOT FOUND in environment variables.")
+        return
+    else:
+        print("✅ TOKEN LOADED")
 
     async with bot:
         await load_cogs()
-        await bot.start(os.getenv("TOKEN"))
+        await bot.start(token)
 
+# Run the bot
 asyncio.run(main())
