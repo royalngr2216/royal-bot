@@ -3,10 +3,9 @@ from discord.ext import commands
 from flask import Flask
 from threading import Thread
 import os
-import asyncio
 
 # ─────────────────────────
-# Flask Web Server (for Render Web Service)
+# Flask Web Server (Required for Render Free Web Service)
 # ─────────────────────────
 
 app = Flask(__name__)
@@ -18,9 +17,8 @@ def home():
 def run_web():
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 10000)))
 
-def keep_alive():
-    thread = Thread(target=run_web)
-    thread.start()
+# Start Flask in background thread
+Thread(target=run_web).start()
 
 
 # ─────────────────────────
@@ -30,7 +28,14 @@ def keep_alive():
 intents = discord.Intents.default()
 intents.message_content = True
 
-bot = commands.Bot(
+class MyBot(commands.Bot):
+    async def setup_hook(self):
+        # Load all cogs
+        for file in os.listdir("./cogs"):
+            if file.endswith(".py"):
+                await self.load_extension(f"cogs.{file[:-3]}")
+
+bot = MyBot(
     command_prefix=".",
     intents=intents,
     help_command=None
@@ -40,26 +45,14 @@ bot = commands.Bot(
 async def on_ready():
     print(f"✅ Logged in as {bot.user}")
 
-async def load_cogs():
-    for file in os.listdir("./cogs"):
-        if file.endswith(".py"):
-            await bot.load_extension(f"cogs.{file[:-3]}")
+# ─────────────────────────
+# Start Bot
+# ─────────────────────────
 
-async def main():
-    # Start Flask server first
-    keep_alive()
+token = os.getenv("TOKEN")
 
-    token = os.getenv("TOKEN")
-
-    if not token:
-        print("❌ TOKEN NOT FOUND in environment variables.")
-        return
-    else:
-        print("✅ TOKEN LOADED")
-
-    async with bot:
-        await load_cogs()
-        await bot.start(token)
-
-# Run the bot
-asyncio.run(main())
+if not token:
+    print("❌ TOKEN NOT FOUND in environment variables.")
+else:
+    print("✅ TOKEN LOADED")
+    bot.run(token)
