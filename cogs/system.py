@@ -202,7 +202,7 @@ class System(commands.Cog):
             return
 
         embed = discord.Embed(
-            title="🎖️ Casino Profile",
+            title="🎖️ Player Profile",
             description=f"Stats for **{member.display_name}**",
             color=discord.Color.gold()
         )
@@ -230,7 +230,7 @@ class System(commands.Cog):
             return
 
         embed = discord.Embed(
-            title="🏆 Casino Leaderboard",
+            title="🏆 Player Leaderboard",
             description="Top Players by Total Bets\n",
             color=discord.Color.blue()
         )
