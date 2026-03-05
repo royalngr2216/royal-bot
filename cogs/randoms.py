@@ -169,7 +169,6 @@ class Randoms(commands.Cog):
             loser = game["player1"]
 
         bet = game["bet"]
-        fee = int(bet * 0.10)
         payout = bet - fee
         
         record_win(winner.id, payout)
