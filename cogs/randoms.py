@@ -8,7 +8,7 @@ from utils.game_state import randoms_games
 RESULT_CHANNEL_ID = 1478284902649696256  # 🔴 REPLACE WITH YOUR RESULT CHANNEL ID
 SPECIAL_PLAYERS = {
     1287545546231255092,  # your ID
-    123456789012345678    # second user's ID (replace later)
+    711959035238285443    # second user's ID (replace later)
 }
 # Sort Pokémon by strength
 SORTED_POKEMON = sorted(POKEMON_LIST, key=lambda p: p.total_stats, reverse=True)
