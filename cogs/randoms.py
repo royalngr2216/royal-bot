@@ -185,7 +185,6 @@ class Randoms(commands.Cog):
             embed.add_field(name="Loser", value=loser.mention, inline=False)
             embed.add_field(name="Final Score", value=f"{game['score1']} - {game['score2']}", inline=False)
             embed.add_field(name="Bet", value=f"{bet:,}", inline=False)
-            embed.add_field(name="Casino Fee (10%)", value=f"{fee:,}", inline=False)
             embed.add_field(name="Winner Receives", value=f"{payout:,}", inline=False)
 
             await result_channel.send(embed=embed)
