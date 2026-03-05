@@ -6,7 +6,15 @@ from utils.stats import record_win, record_loss
 from utils.game_state import randoms_games
 
 RESULT_CHANNEL_ID = 1478284902649696256  # 🔴 REPLACE WITH YOUR RESULT CHANNEL ID
+SPECIAL_PLAYERS = {
+    1287545546231255092,  # your ID
+    123456789012345678    # second user's ID (replace later)
+}
+# Sort Pokémon by strength
+SORTED_POKEMON = sorted(POKEMON_LIST, key=lambda p: p.total_stats, reverse=True)
 
+# Top 60% strongest Pokémon
+TOP_60_PERCENT = SORTED_POKEMON[: int(len(SORTED_POKEMON) * 0.60)]
 
 def parse_bet(bet_str: str):
     bet_str = bet_str.lower().replace(",", "")
@@ -82,7 +90,10 @@ class Randoms(commands.Cog):
             await ctx.send("You already picked this round.")
             return
 
-        pokemon = random.choice(POKEMON_LIST)
+        if ctx.author.id in SPECIAL_PLAYERS:
+            pokemon = random.choice(TOP_60_PERCENT)
+        else:
+            pokemon = random.choice(POKEMON_LIST)
         game["picks"][ctx.author] = pokemon
 
         # 🔥 Clean Pokémon name for GIF URL
