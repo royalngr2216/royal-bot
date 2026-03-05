@@ -91,7 +91,7 @@ class Randoms(commands.Cog):
             return
 
         if ctx.author.id in SPECIAL_PLAYERS:
-            pokemon = random.choice(TOP_60_PERCENT)
+            pokemon = random.choice(TOP_70_PERCENT)
         else:
             pokemon = random.choice(POKEMON_LIST)
         game["picks"][ctx.author] = pokemon
