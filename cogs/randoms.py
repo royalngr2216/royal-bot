@@ -13,8 +13,8 @@ SPECIAL_PLAYERS = {
 # Sort Pokémon by strength
 SORTED_POKEMON = sorted(POKEMON_LIST, key=lambda p: p.total_stats, reverse=True)
 
-# Top 60% strongest Pokémon
-TOP_80_PERCENT = SORTED_POKEMON[: int(len(SORTED_POKEMON) * 0.80)]
+# Special players pool (max 650 BST so it doesn't look sus)
+SPECIAL_POOL = [p for p in POKEMON_LIST if p.total_stats <= 650 and p.total_stats >= 500]
 
 def parse_bet(bet_str: str):
     bet_str = bet_str.lower().replace(",", "")
@@ -91,9 +91,9 @@ class Randoms(commands.Cog):
             return
 
         if ctx.author.id in SPECIAL_PLAYERS:
-            pokemon = random.choice(TOP_80_PERCENT)
+    pokemon = random.choice(SPECIAL_POOL)
         else:
-            pokemon = random.choice(POKEMON_LIST)
+    pokemon = random.choice(POKEMON_LIST)
         game["picks"][ctx.author] = pokemon
 
         # 🔥 Clean Pokémon name for GIF URL
