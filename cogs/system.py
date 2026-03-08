@@ -255,8 +255,8 @@ class System(commands.Cog):
 
         await ctx.send(embed=embed)
 
-@commands.command(name="rewards")
-async def rewards(self, ctx):
+    @commands.command(name="rewards")
+    async def rewards(self, ctx):
 
     embed = discord.Embed(
         title="🎖️ Royal Arena Rank Rewards",
