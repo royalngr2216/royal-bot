@@ -255,6 +255,72 @@ class System(commands.Cog):
 
         await ctx.send(embed=embed)
 
+@commands.command(name="rewards")
+async def rewards(self, ctx):
 
+    embed = discord.Embed(
+        title="🎖️ Royal Arena Rank Rewards",
+        description="Progress through levels and unlock exclusive roles.\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━",
+        color=discord.Color.from_rgb(255, 215, 0)
+    )
+
+    embed.add_field(
+        name="👑 Royal",
+        value="`Level 500+`",
+        inline=False
+    )
+
+    embed.add_field(
+        name="💎 Casino King",
+        value="`Level 400+`",
+        inline=False
+    )
+
+    embed.add_field(
+        name="🔥 Elite",
+        value="`Level 300+`",
+        inline=False
+    )
+
+    embed.add_field(
+        name="💰 High Roller",
+        value="`Level 200+`",
+        inline=False
+    )
+
+    embed.add_field(
+        name="🎲 Addicted",
+        value="`Level 100+`",
+        inline=False
+    )
+
+    embed.add_field(
+        name="🃏 Gambler",
+        value="`Level 50+`",
+        inline=False
+    )
+
+    embed.add_field(
+        name="⚙️ Grinder",
+        value="`Level 20+`",
+        inline=False
+    )
+
+    embed.add_field(
+        name="🌱 Rookie",
+        value="`Level 5+`",
+        inline=False
+    )
+
+    embed.add_field(
+        name="👤 Member",
+        value="Default role",
+        inline=False
+    )
+
+    embed.set_footer(text="Climb the ranks by playing games and increasing your level")
+
+    await ctx.send(embed=embed)
+    
 async def setup(bot):
     await bot.add_cog(System(bot))
