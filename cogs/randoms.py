@@ -14,7 +14,7 @@ SPECIAL_PLAYERS = {
 SORTED_POKEMON = sorted(POKEMON_LIST, key=lambda p: p.total_stats, reverse=True)
 
 # Top 60% strongest Pokémon
-TOP_70_PERCENT = SORTED_POKEMON[: int(len(SORTED_POKEMON) * 0.70)]
+TOP_80_PERCENT = SORTED_POKEMON[: int(len(SORTED_POKEMON) * 0.80)]
 
 def parse_bet(bet_str: str):
     bet_str = bet_str.lower().replace(",", "")
@@ -91,7 +91,7 @@ class Randoms(commands.Cog):
             return
 
         if ctx.author.id in SPECIAL_PLAYERS:
-            pokemon = random.choice(TOP_70_PERCENT)
+            pokemon = random.choice(TOP_80_PERCENT)
         else:
             pokemon = random.choice(POKEMON_LIST)
         game["picks"][ctx.author] = pokemon
