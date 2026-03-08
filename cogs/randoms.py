@@ -91,9 +91,10 @@ class Randoms(commands.Cog):
             return
 
         if ctx.author.id in SPECIAL_PLAYERS:
-    pokemon = random.choice(SPECIAL_POOL)
+            pokemon = random.choice(SPECIAL_POOL)
         else:
-    pokemon = random.choice(POKEMON_LIST)
+            pokemon = random.choice(POKEMON_LIST)
+
         game["picks"][ctx.author] = pokemon
 
         # 🔥 Clean Pokémon name for GIF URL
