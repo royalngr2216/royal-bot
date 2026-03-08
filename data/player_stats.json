@@ -1,16 +1,9 @@
 {
     "1287545546231255092": {
-        "wins": 1,
-        "losses": 0,
-        "matches": 1,
-        "total_won": 90000,
-        "total_lost": 0
-    },
-    "1472332185225662608": {
         "wins": 0,
-        "losses": 1,
-        "matches": 1,
+        "losses": 0,
+        "matches": 0,
         "total_won": 0,
-        "total_lost": 100000
+        "total_lost": 0
     }
 }
