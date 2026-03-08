@@ -1,70 +1,72 @@
-import json
 import os
+from pymongo import MongoClient
 
-STATS_FILE = "data/player_stats.json"
+# Connect to MongoDB
+MONGO_URI = os.getenv("MONGO_URI")
+client = MongoClient(MONGO_URI)
 
-
-def load_stats():
-    if not os.path.exists(STATS_FILE):
-        with open(STATS_FILE, "w") as f:
-            json.dump({}, f)
-
-    with open(STATS_FILE, "r") as f:
-        return json.load(f)
-
-
-def save_stats(data):
-    with open(STATS_FILE, "w") as f:
-        json.dump(data, f, indent=4)
+db = client["royal_bot"]
+stats_collection = db["player_stats"]
 
 
 def ensure_user(user_id):
-    data = load_stats()
+    user_id = str(user_id)
 
-    if str(user_id) not in data:
-        data[str(user_id)] = {
+    user = stats_collection.find_one({"user_id": user_id})
+
+    if not user:
+        user = {
+            "user_id": user_id,
             "wins": 0,
             "losses": 0,
             "matches": 0,
             "total_won": 0,
             "total_lost": 0
         }
-        save_stats(data)
+        stats_collection.insert_one(user)
 
-    return data
+    return user
 
 
 def record_win(user_id, amount):
-    data = ensure_user(user_id)
+    ensure_user(user_id)
 
-    data[str(user_id)]["wins"] += 1
-    data[str(user_id)]["matches"] += 1
-    data[str(user_id)]["total_won"] += amount
-
-    save_stats(data)
+    stats_collection.update_one(
+        {"user_id": str(user_id)},
+        {
+            "$inc": {
+                "wins": 1,
+                "matches": 1,
+                "total_won": amount
+            }
+        }
+    )
 
 
 def record_loss(user_id, amount):
-    data = ensure_user(user_id)
+    ensure_user(user_id)
 
-    data[str(user_id)]["losses"] += 1
-    data[str(user_id)]["matches"] += 1
-    data[str(user_id)]["total_lost"] += amount
-
-    save_stats(data)
+    stats_collection.update_one(
+        {"user_id": str(user_id)},
+        {
+            "$inc": {
+                "losses": 1,
+                "matches": 1,
+                "total_lost": amount
+            }
+        }
+    )
 
 
 def get_profile(user_id):
-    data = load_stats()
+    user = stats_collection.find_one({"user_id": str(user_id)})
 
-    if str(user_id) not in data:
+    if not user:
         return None
 
-    stats = data[str(user_id)]
-
-    wins = stats["wins"]
-    losses = stats["losses"]
-    matches = stats["matches"]
+    wins = user["wins"]
+    losses = user["losses"]
+    matches = user["matches"]
 
     winrate = 0
     if matches > 0:
@@ -75,28 +77,28 @@ def get_profile(user_id):
         "losses": losses,
         "matches": matches,
         "winrate": winrate,
-        "total_won": stats["total_won"],
-        "total_lost": stats["total_lost"]
+        "total_won": user["total_won"],
+        "total_lost": user["total_lost"]
     }
-    
+
+
 def get_leaderboard():
-    data = load_stats()
+    users = stats_collection.find()
 
     leaderboard = []
 
-    for user_id, stats in data.items():
-        matches = stats["matches"]
-        wins = stats["wins"]
+    for user in users:
+        matches = user["matches"]
+        wins = user["wins"]
 
         winrate = 0
         if matches > 0:
             winrate = round((wins / matches) * 100, 2)
 
         leaderboard.append(
-            (user_id, matches, winrate)
+            (user["user_id"], matches, winrate)
         )
 
-    # Sort by matches descending
     leaderboard.sort(key=lambda x: x[1], reverse=True)
 
-    return leaderboard[:10]  # Top 10
+    return leaderboard[:10]
