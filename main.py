@@ -5,7 +5,7 @@ from threading import Thread
 import os
 
 # ─────────────────────────
-# Flask Web Server (Required for Render Free Web Service)
+# Flask Web Server (Render requires this)
 # ─────────────────────────
 
 app = Flask(__name__)
@@ -17,8 +17,12 @@ def home():
 def run_web():
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 10000)))
 
-# Start Flask in background thread
-Thread(target=run_web).start()
+def keep_alive():
+    t = Thread(target=run_web)
+    t.start()
+
+# Start Flask server
+keep_alive()
 
 
 # ─────────────────────────
@@ -30,10 +34,15 @@ intents.message_content = True
 
 class MyBot(commands.Bot):
     async def setup_hook(self):
-        # Load all cogs
-        for file in os.listdir("./cogs"):
-            if file.endswith(".py"):
-                await self.load_extension(f"cogs.{file[:-3]}")
+        # Load all cogs safely
+        if os.path.exists("./cogs"):
+            for file in os.listdir("./cogs"):
+                if file.endswith(".py"):
+                    try:
+                        await self.load_extension(f"cogs.{file[:-3]}")
+                        print(f"✅ Loaded cog: {file}")
+                    except Exception as e:
+                        print(f"❌ Failed to load {file}: {e}")
 
 bot = MyBot(
     command_prefix=".",
@@ -43,7 +52,8 @@ bot = MyBot(
 
 @bot.event
 async def on_ready():
-    print(f"✅ Logged in as {bot.user}")
+    print(f"🚀 Logged in as {bot.user}")
+
 
 # ─────────────────────────
 # Start Bot
