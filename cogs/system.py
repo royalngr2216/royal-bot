@@ -210,9 +210,10 @@ class System(commands.Cog):
         embed.set_thumbnail(url=member.display_avatar.url)
 
         embed.add_field(name="🎲 Total Bets", value=stats["matches"], inline=True)
-        embed.add_field(name="🏆 Wins", value=stats["wins"], inline=True)
         embed.add_field(name="💀 Losses", value=stats["losses"], inline=True)
         embed.add_field(name="📊 Win Rate", value=f"{stats['winrate']}%", inline=False)
+        embed.add_field(name="🔥 Current Streak", value=stats.get("streak", 0), inline=True)
+        embed.add_field(name="🏅 Best Streak", value=stats.get("best_streak", 0), inline=True)
         embed.add_field(name="📉 Total Lost", value=f"{stats['total_lost']:,}", inline=True)
 
         embed.set_footer(text="Game Arena Competitive Stats")
