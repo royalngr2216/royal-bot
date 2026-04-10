@@ -24,6 +24,9 @@ ROLE_REWARDS = {
     500: 1478380890706149397
 }
 
+# ─────────────────────────
+# Rank Name
+# ─────────────────────────
 def get_rank_name(matches):
     ranks = [
         (500, "👑 Royal"),
@@ -42,6 +45,53 @@ def get_rank_name(matches):
             return name
 
 
+# ─────────────────────────
+# Rank Progress System
+# ─────────────────────────
+def get_rank_progress(matches):
+    ranks = [
+        (0, "Member"),
+        (5, "Rookie"),
+        (20, "Grinder"),
+        (50, "Gambler"),
+        (100, "Addicted"),
+        (200, "High Roller"),
+        (300, "Elite"),
+        (400, "Casino King"),
+        (500, "Royal")
+    ]
+
+    current = (0, "Member")
+    next_rank = None
+
+    for i in range(len(ranks)):
+        if matches >= ranks[i][0]:
+            current = ranks[i]
+            if i + 1 < len(ranks):
+                next_rank = ranks[i + 1]
+
+    if not next_rank:
+        return current[1], "MAX", 100, "██████████", 0
+
+    current_req = current[0]
+    next_req = next_rank[0]
+
+    progress = matches - current_req
+    total_needed = next_req - current_req
+
+    percent = int((progress / total_needed) * 100)
+
+    filled = int(percent / 10)
+    bar = "█" * filled + "░" * (10 - filled)
+
+    remaining = next_req - matches
+
+    return current[1], next_rank[1], percent, bar, remaining
+
+
+# ─────────────────────────
+# Role Update System
+# ─────────────────────────
 async def update_roles(member, matches):
     sorted_roles = sorted(ROLE_REWARDS.items())
 
@@ -67,6 +117,9 @@ async def update_roles(member, matches):
     await member.add_roles(new_role)
 
 
+# ─────────────────────────
+# Help UI
+# ─────────────────────────
 class HelpView(discord.ui.View):
     def __init__(self, embeds):
         super().__init__(timeout=120)
@@ -84,17 +137,19 @@ class HelpView(discord.ui.View):
         await interaction.response.edit_message(embed=self.embeds[self.current_page], view=self)
 
 
+# ─────────────────────────
+# System Cog
+# ─────────────────────────
 class System(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
-    # ✅ HELP COMMAND FIXED
     @commands.command(name="help")
     async def help_prefix(self, ctx):
 
         embed1 = discord.Embed(
             title="🎮 Royal Arena — Games",
-            description="**Play and compete with others!**\n━━━━━━━━━━━━━━━━━━━━━━",
+            description="Play and compete\n━━━━━━━━━━━━━━━━━━━━━━",
             color=discord.Color.from_rgb(0, 200, 255)
         )
 
@@ -106,13 +161,14 @@ class System(commands.Cog):
 
         embed2 = discord.Embed(
             title="⚙️ System",
-            description="Commands",
+            description="Commands\n━━━━━━━━━━━━━━━━━━━━━━",
             color=discord.Color.from_rgb(255, 170, 0)
         )
 
         embed2.add_field(name="🎖️ Profile", value="`.profile`", inline=False)
         embed2.add_field(name="🏆 Leaderboard", value="`.leaderboard`", inline=False)
         embed2.add_field(name="🛑 Stop", value="`.stop`", inline=False)
+        embed2.add_field(name="📡 Ping", value="`.ping`", inline=False)
 
         await ctx.send(embed=embed1, view=HelpView([embed1, embed2]))
 
@@ -137,6 +193,7 @@ class System(commands.Cog):
 
         stats = get_profile(member.id)
         rank = get_rank_name(stats["matches"])
+        current_rank, next_rank, percent, bar, remaining = get_rank_progress(stats["matches"])
 
         embed = discord.Embed(
             title="🎖️ Player Profile",
@@ -149,8 +206,16 @@ class System(commands.Cog):
         embed.add_field(name="🏅 Rank", value=rank, inline=True)
         embed.add_field(name="🎲 Bets", value=stats["matches"], inline=True)
         embed.add_field(name="💀 Losses", value=stats["losses"], inline=True)
-        embed.add_field(name="📊 Winrate", value=f"{stats['winrate']}%", inline=False)
+
+        embed.add_field(
+            name="📊 Progress",
+            value=f"{bar} {percent}%\n⬆️ Next: {next_rank}\n📌 Need: {remaining} bets",
+            inline=False
+        )
+
+        embed.add_field(name="📊 Winrate", value=f"{stats['winrate']}%", inline=True)
         embed.add_field(name="🔥 Streak", value=stats.get("streak", 0), inline=True)
+        embed.add_field(name="🏅 Best", value=stats.get("best_streak", 0), inline=True)
 
         await ctx.send(embed=embed)
 
