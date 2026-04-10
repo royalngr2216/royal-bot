@@ -31,6 +31,7 @@ keep_alive()
 
 intents = discord.Intents.default()
 intents.message_content = True
+intents.members = True   # ✅ ADD THIS
 
 class MyBot(commands.Bot):
     async def setup_hook(self):
@@ -53,6 +54,15 @@ bot = MyBot(
 @bot.event
 async def on_ready():
     print(f"🚀 Logged in as {bot.user}")
+
+@bot.event
+async def on_member_join(member):
+    role_id = 1478375120895475866  # replace this
+
+    role = member.guild.get_role(role_id)
+
+    if role:
+        await member.add_roles(role)
 
 
 # ─────────────────────────
