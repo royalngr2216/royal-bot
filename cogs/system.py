@@ -14,14 +14,14 @@ from utils.game_state import (
 # Role Rewards System
 # ─────────────────────────
 ROLE_REWARDS = {
-    5: 111111111111111111,     # Rookie
-    20: 222222222222222222,    # Grinder
-    50: 333333333333333333,    # Gambler
-    100: 444444444444444444,   # Addicted
-    200: 555555555555555555,   # High Roller
-    300: 666666666666666666,   # Elite
-    400: 777777777777777777,   # Casino King
-    500: 888888888888888888    # Royal
+    5: 1478375252290699386,     # Rookie
+    20: 1478370330455048192,    # Grinder
+    50: 1478380593577332736,    # Gambler
+    100: 1478380652020895795,   # Addicted
+    200: 1478380725911949313,   # High Roller
+    300: 1478380759218917447,   # Elite
+    400: 1478380845193625641,   # Casino King
+    500: 1478380890706149397    # Royal
 }
 
 async def update_roles(member, matches):
