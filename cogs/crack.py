@@ -150,6 +150,11 @@ class Crack(commands.Cog):
         payout = bet
         record_win(winner.id, payout)
         record_loss(loser.id, bet)
+        winner_stats = get_profile(winner.id)
+        await update_roles(winner, winner_stats["matches"])
+
+        loser_stats = get_profile(loser.id)
+        await update_roles(loser, loser_stats["matches"])
 
         result_channel = self.bot.get_channel(RESULT_CHANNEL_ID)
 
