@@ -24,6 +24,25 @@ ROLE_REWARDS = {
     500: 1478380890706149397    # Royal
 }
 
+# 🔥 Rank Name Function
+def get_rank_name(matches):
+    ranks = [
+        (500, "👑 Royal"),
+        (400, "💎 Casino King"),
+        (300, "🔥 Elite"),
+        (200, "💰 High Roller"),
+        (100, "🎲 Addicted"),
+        (50, "🃏 Gambler"),
+        (20, "⚙️ Grinder"),
+        (5, "🌱 Rookie"),
+        (0, "👤 Member")
+    ]
+
+    for required, name in ranks:
+        if matches >= required:
+            return name
+
+
 async def update_roles(member, matches):
     sorted_roles = sorted(ROLE_REWARDS.items())
 
@@ -152,6 +171,7 @@ class System(commands.Cog):
             member = ctx.author
 
         stats = get_profile(member.id)
+        rank = get_rank_name(stats["matches"])  # 🔥 NEW
 
         embed = discord.Embed(
             title="🎖️ Player Profile",
@@ -161,6 +181,7 @@ class System(commands.Cog):
 
         embed.set_thumbnail(url=member.display_avatar.url)
 
+        embed.add_field(name="🏅 Rank", value=rank, inline=True)  # 🔥 NEW
         embed.add_field(name="🎲 Bets", value=stats["matches"], inline=True)
         embed.add_field(name="💀 Losses", value=stats["losses"], inline=True)
         embed.add_field(name="📊 Winrate", value=f"{stats['winrate']}%", inline=False)
