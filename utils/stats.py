@@ -58,11 +58,22 @@ def record_loss(user_id, amount):
     )
 
 
+# ✅ FIXED: Auto-create profile if missing
 def get_profile(user_id):
-    user = stats_collection.find_one({"user_id": str(user_id)})
+    user_id = str(user_id)
+
+    user = stats_collection.find_one({"user_id": user_id})
 
     if not user:
-        return None
+        user = {
+            "user_id": user_id,
+            "wins": 0,
+            "losses": 0,
+            "matches": 0,
+            "total_won": 0,
+            "total_lost": 0
+        }
+        stats_collection.insert_one(user)
 
     wins = user["wins"]
     losses = user["losses"]
