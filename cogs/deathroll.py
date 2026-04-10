@@ -138,7 +138,7 @@ class Deathroll(commands.Cog):
         await update_roles(loser, loser_stats["matches"])
 
         # KEEP EVERYTHING BELOW SAME
-       result_channel = self.bot.get_channel(RESULT_CHANNEL_ID)
+        result_channel = self.bot.get_channel(RESULT_CHANNEL_ID)
 
         if result_channel:
             embed = discord.Embed(
