@@ -14,17 +14,16 @@ from utils.game_state import (
 # Role Rewards System
 # ─────────────────────────
 ROLE_REWARDS = {
-    5: 1478375252290699386,     # Rookie
-    20: 1478370330455048192,    # Grinder
-    50: 1478380593577332736,    # Gambler
-    100: 1478380652020895795,   # Addicted
-    200: 1478380725911949313,   # High Roller
-    300: 1478380759218917447,   # Elite
-    400: 1478380845193625641,   # Casino King
-    500: 1478380890706149397    # Royal
+    5: 1478375252290699386,
+    20: 1478370330455048192,
+    50: 1478380593577332736,
+    100: 1478380652020895795,
+    200: 1478380725911949313,
+    300: 1478380759218917447,
+    400: 1478380845193625641,
+    500: 1478380890706149397
 }
 
-# 🔥 Rank Name Function
 def get_rank_name(matches):
     ranks = [
         (500, "👑 Royal"),
@@ -47,7 +46,6 @@ async def update_roles(member, matches):
     sorted_roles = sorted(ROLE_REWARDS.items())
 
     new_role_id = None
-
     for required, role_id in sorted_roles:
         if matches >= required:
             new_role_id = role_id
@@ -61,19 +59,14 @@ async def update_roles(member, matches):
     if not new_role:
         return
 
-    # Remove old roles
     for _, role_id in ROLE_REWARDS.items():
         role = guild.get_role(role_id)
         if role and role in member.roles:
             await member.remove_roles(role)
 
-    # Add new role
     await member.add_roles(new_role)
 
 
-# ─────────────────────────────────────────────
-# Pagination View
-# ─────────────────────────────────────────────
 class HelpView(discord.ui.View):
     def __init__(self, embeds):
         super().__init__(timeout=120)
@@ -95,59 +88,31 @@ class System(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
+    # ✅ HELP COMMAND FIXED
     @commands.command(name="help")
     async def help_prefix(self, ctx):
 
         embed1 = discord.Embed(
-            title="🎮  ROYAL ARENA",
-            description="Navigate using ⬅️ ➡️ buttons\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━",
+            title="🎮 Royal Arena — Games",
+            description="**Play and compete with others!**\n━━━━━━━━━━━━━━━━━━━━━━",
             color=discord.Color.from_rgb(0, 200, 255)
         )
 
-        embed1.add_field(
-            name="━━━━━━━━━━ 🪙 FLIP ━━━━━━━━━━",
-            value="```yaml\nCommand : .flip\nType : Coin Flipping Game\nWin : 50 / 50 chance\n```",
-            inline=False
-        )
-
-        embed1.add_field(
-            name="━━━━━━━━━━ 🐉 RANDOMS ━━━━━━━━━━",
-            value="```yaml\nCommand : .randoms @user\nAction : .pick\nResult : Strongest Wins\n```",
-            inline=False
-        )
-
-        embed1.add_field(
-            name="━━━━━━━━━━ 💀 DEATHROLL ━━━━━━━━━━",
-            value="```yaml\nCommand : .deathroll @user\nMode : Whoever gets 1 loses\n```",
-            inline=False
-        )
-
-        embed1.add_field(
-            name="━━━━━━━━━━ 🔢 CRACK ━━━━━━━━━━",
-            value="```yaml\nCommand : .crack @user\nAction : .guess\nGoal : Closest wins\n```",
-            inline=False
-        )
-
-        embed1.add_field(
-            name="━━━━━━━━━━ 🎰 JACKPOT ━━━━━━━━━━",
-            value="```yaml\nCommand : .jackpot\nJoin : React 🎰\nMode : Random\n```",
-            inline=False
-        )
-
-        embed1.set_footer(text="Page 1/2 • Games")
+        embed1.add_field(name="🪙 Flip", value="`.flip`", inline=False)
+        embed1.add_field(name="🐉 Randoms", value="`.randoms @user`", inline=False)
+        embed1.add_field(name="💀 Deathroll", value="`.deathroll @user`", inline=False)
+        embed1.add_field(name="🔢 Crack", value="`.crack @user`", inline=False)
+        embed1.add_field(name="🎰 Jackpot", value="`.jackpot`", inline=False)
 
         embed2 = discord.Embed(
             title="⚙️ System",
-            description="Commands\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━",
+            description="Commands",
             color=discord.Color.from_rgb(255, 170, 0)
         )
 
-        embed2.add_field(name="🛑 STOP", value="`.stop`", inline=False)
-        embed2.add_field(name="📡 PING", value="`.ping`", inline=False)
-        embed2.add_field(name="🎖️ PROFILE", value="`.profile`", inline=False)
-        embed2.add_field(name="🏆 LEADERBOARD", value="`.leaderboard`", inline=False)
-
-        embed2.set_footer(text="Page 2/2 • System")
+        embed2.add_field(name="🎖️ Profile", value="`.profile`", inline=False)
+        embed2.add_field(name="🏆 Leaderboard", value="`.leaderboard`", inline=False)
+        embed2.add_field(name="🛑 Stop", value="`.stop`", inline=False)
 
         await ctx.send(embed=embed1, view=HelpView([embed1, embed2]))
 
@@ -171,7 +136,7 @@ class System(commands.Cog):
             member = ctx.author
 
         stats = get_profile(member.id)
-        rank = get_rank_name(stats["matches"])  # 🔥 NEW
+        rank = get_rank_name(stats["matches"])
 
         embed = discord.Embed(
             title="🎖️ Player Profile",
@@ -181,12 +146,11 @@ class System(commands.Cog):
 
         embed.set_thumbnail(url=member.display_avatar.url)
 
-        embed.add_field(name="🏅 Rank", value=rank, inline=True)  # 🔥 NEW
+        embed.add_field(name="🏅 Rank", value=rank, inline=True)
         embed.add_field(name="🎲 Bets", value=stats["matches"], inline=True)
         embed.add_field(name="💀 Losses", value=stats["losses"], inline=True)
         embed.add_field(name="📊 Winrate", value=f"{stats['winrate']}%", inline=False)
         embed.add_field(name="🔥 Streak", value=stats.get("streak", 0), inline=True)
-        embed.add_field(name="🏅 Best", value=stats.get("best_streak", 0), inline=True)
 
         await ctx.send(embed=embed)
 
@@ -194,7 +158,6 @@ class System(commands.Cog):
     async def leaderboard(self, ctx):
 
         data = get_leaderboard()
-
         embed = discord.Embed(title="🏆 Leaderboard", color=discord.Color.blue())
 
         for i, (uid, matches, winrate) in enumerate(data):
