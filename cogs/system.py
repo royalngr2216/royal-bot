@@ -96,61 +96,84 @@ class System(commands.Cog):
         self.bot = bot
 
     @commands.command(name="help")
-    async def help_prefix(self, ctx):
+async def help_prefix(self, ctx):
 
-        embed1 = discord.Embed(
-            title="🎮  ROYAL ARENA",
-            description="Navigate using ⬅️ ➡️ buttons\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━",
-            color=discord.Color.from_rgb(0, 200, 255)
-        )
+    # ───────────── PAGE 1 — GAMES
+    embed1 = discord.Embed(
+        title="🎮 Royal Arena — Games",
+        description="**Play and compete with others!**\n━━━━━━━━━━━━━━━━━━━━━━",
+        color=discord.Color.from_rgb(0, 200, 255)
+    )
 
-        embed1.add_field(
-            name="━━━━━━━━━━ 🪙 FLIP ━━━━━━━━━━",
-            value="```yaml\nCommand : .flip\nType : Coin Flipping Game\nWin : 50 / 50 chance\n```",
-            inline=False
-        )
+    embed1.add_field(
+        name="🪙 Flip",
+        value="` .flip `\nSimple 50/50 coin toss.",
+        inline=False
+    )
 
-        embed1.add_field(
-            name="━━━━━━━━━━ 🐉 RANDOMS ━━━━━━━━━━",
-            value="```yaml\nCommand : .randoms @user\nAction : .pick\nResult : Strongest Wins\n```",
-            inline=False
-        )
+    embed1.add_field(
+        name="🐉 Randoms",
+        value="` .randoms @user `\nBoth players pick Pokémon → strongest wins.",
+        inline=False
+    )
 
-        embed1.add_field(
-            name="━━━━━━━━━━ 💀 DEATHROLL ━━━━━━━━━━",
-            value="```yaml\nCommand : .deathroll @user\nMode : Whoever gets 1 loses\n```",
-            inline=False
-        )
+    embed1.add_field(
+        name="💀 Deathroll",
+        value="` .deathroll @user (BO) bet `\nRoll until someone hits 1.",
+        inline=False
+    )
 
-        embed1.add_field(
-            name="━━━━━━━━━━ 🔢 CRACK ━━━━━━━━━━",
-            value="```yaml\nCommand : .crack @user\nAction : .guess\nGoal : Closest wins\n```",
-            inline=False
-        )
+    embed1.add_field(
+        name="🔢 Crack",
+        value="` .crack @user (BO) bet `\nClosest number guess wins.",
+        inline=False
+    )
 
-        embed1.add_field(
-            name="━━━━━━━━━━ 🎰 JACKPOT ━━━━━━━━━━",
-            value="```yaml\nCommand : .jackpot\nJoin : React 🎰\nMode : Random\n```",
-            inline=False
-        )
+    embed1.add_field(
+        name="🎰 Jackpot",
+        value="` .jackpot `\nJoin and survive random elimination.",
+        inline=False
+    )
 
-        embed1.set_footer(text="Page 1/2 • Games")
+    embed1.set_footer(text="Page 1/2 • Use buttons below")
 
-        embed2 = discord.Embed(
-            title="⚙️ System",
-            description="Commands\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━",
-            color=discord.Color.from_rgb(255, 170, 0)
-        )
+    # ───────────── PAGE 2 — SYSTEM
+    embed2 = discord.Embed(
+        title="⚙️ Royal Arena — System",
+        description="**Stats, rankings & utilities**\n━━━━━━━━━━━━━━━━━━━━━━",
+        color=discord.Color.from_rgb(255, 170, 0)
+    )
 
-        embed2.add_field(name="🛑 STOP", value="`.stop`", inline=False)
-        embed2.add_field(name="📡 PING", value="`.ping`", inline=False)
-        embed2.add_field(name="🎖️ PROFILE", value="`.profile`", inline=False)
-        embed2.add_field(name="🏆 LEADERBOARD", value="`.leaderboard`", inline=False)
+    embed2.add_field(
+        name="🎖️ Profile",
+        value="` .profile `\nView your stats, rank & streak.",
+        inline=False
+    )
 
-        embed2.set_footer(text="Page 2/2 • System")
+    embed2.add_field(
+        name="🏆 Leaderboard",
+        value="` .leaderboard `\nTop players by total matches.",
+        inline=False
+    )
 
-        await ctx.send(embed=embed1, view=HelpView([embed1, embed2]))
+    embed2.add_field(
+        name="🛑 Stop",
+        value="` .stop `\nStops all active games in channel.",
+        inline=False
+    )
 
+    embed2.add_field(
+        name="📡 Ping",
+        value="` .ping `\nCheck bot latency.",
+        inline=False
+    )
+
+    embed2.set_footer(text="Page 2/2 • Royal Arena")
+
+    view = HelpView([embed1, embed2])
+
+    await ctx.send(embed=embed1, view=view)
+    
     @commands.command(name="stop")
     async def stop_prefix(self, ctx):
 
