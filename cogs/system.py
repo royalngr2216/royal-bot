@@ -154,7 +154,7 @@ class System(commands.Cog):
             name="━━━━━━━━━━ 🐉 RANDOMS ━━━━━━━━━━",
             value=(
                 "```yaml\n"
-                "Command : .randoms @user\n"
+                "Command : .randoms @user (1/3/5) bet\n"
                 "Action  : Both users type .pick\n"
                 "Result  : The Strongest Wins\n"
                 "```"
