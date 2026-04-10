@@ -2,7 +2,8 @@ from discord.ext import commands
 import random
 import discord
 from utils.game_state import crack_games
-from utils.stats import record_win, record_loss
+from utils.stats import record_win, record_loss, get_profile
+from cogs.system import update_roles
 
 RESULT_CHANNEL_ID = 1478284902649696256  # SAME result channel as deathroll
 
