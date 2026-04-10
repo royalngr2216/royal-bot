@@ -2,7 +2,8 @@ from discord.ext import commands
 import random
 import discord
 from utils.game_state import deathroll_games
-from utils.stats import record_win, record_loss
+from utils.stats import record_win, record_loss, get_profile
+from cogs.system import update_roles
 
 RESULT_CHANNEL_ID = 1478284902649696256  # CHANGE THIS
 
@@ -130,8 +131,14 @@ class Deathroll(commands.Cog):
         
         record_win(winner.id, payout)
         record_loss(loser.id, bet)
+        # 🔥 ADD ROLE UPDATE
+        winner_stats = get_profile(winner.id)
+        await update_roles(winner, winner_stats["matches"])
+        loser_stats = get_profile(loser.id)
+        await update_roles(loser, loser_stats["matches"])
 
-        result_channel = self.bot.get_channel(RESULT_CHANNEL_ID)
+        # KEEP EVERYTHING BELOW SAME
+       result_channel = self.bot.get_channel(RESULT_CHANNEL_ID)
 
         if result_channel:
             embed = discord.Embed(
