@@ -147,30 +147,79 @@ class System(commands.Cog):
     @commands.command(name="help")
     async def help_prefix(self, ctx):
 
-        embed1 = discord.Embed(
-            title="🎮 Royal Arena — Games",
-            description="Play and compete\n━━━━━━━━━━━━━━━━━━━━━━",
-            color=discord.Color.from_rgb(0, 200, 255)
-        )
+    # ───────────── PAGE 1 — GAMES
+    embed1 = discord.Embed(
+        title="🎮 Royal Arena — Games",
+        description="Play exciting betting games with others\n━━━━━━━━━━━━━━━━━━━━━━",
+        color=discord.Color.from_rgb(0, 200, 255)
+    )
 
-        embed1.add_field(name="🪙 Flip", value="`.flip`", inline=False)
-        embed1.add_field(name="🐉 Randoms", value="`.randoms @user`", inline=False)
-        embed1.add_field(name="💀 Deathroll", value="`.deathroll @user`", inline=False)
-        embed1.add_field(name="🔢 Crack", value="`.crack @user`", inline=False)
-        embed1.add_field(name="🎰 Jackpot", value="`.jackpot`", inline=False)
+    embed1.add_field(
+        name="🪙 Flip",
+        value="Quick coin toss (50/50)\nUsage: `.flip`\nExample: `.flip`",
+        inline=False
+    )
 
-        embed2 = discord.Embed(
-            title="⚙️ System",
-            description="Commands\n━━━━━━━━━━━━━━━━━━━━━━",
-            color=discord.Color.from_rgb(255, 170, 0)
-        )
+    embed1.add_field(
+        name="🐉 Randoms",
+        value="Pick random fighters → strongest wins\nUsage: `.randoms @user BO amount`\nExample: `.randoms @royalngr 3 500k`",
+        inline=False
+    )
 
-        embed2.add_field(name="🎖️ Profile", value="`.profile`", inline=False)
-        embed2.add_field(name="🏆 Leaderboard", value="`.leaderboard`", inline=False)
-        embed2.add_field(name="🛑 Stop", value="`.stop`", inline=False)
-        embed2.add_field(name="📡 Ping", value="`.ping`", inline=False)
+    embed1.add_field(
+        name="💀 Deathroll",
+        value="Roll until someone hits 1\nUsage: `.deathroll @user BO amount`\nExample: `.deathroll @user 5 1m`",
+        inline=False
+    )
 
-        await ctx.send(embed=embed1, view=HelpView([embed1, embed2]))
+    embed1.add_field(
+        name="🔢 Crack",
+        value="Guess number closest to target\nUsage: `.crack @user BO amount`\nExample: `.crack @user 3 500k`",
+        inline=False
+    )
+
+    embed1.add_field(
+        name="🎰 Jackpot",
+        value="Join pool → random winner\nUsage: `.jackpot`",
+        inline=False
+    )
+
+    embed1.set_footer(text="Page 1/2 • Games")
+
+    # ───────────── PAGE 2 — SYSTEM
+    embed2 = discord.Embed(
+        title="⚙️ Royal Arena — System",
+        description="Stats, ranking & utilities\n━━━━━━━━━━━━━━━━━━━━━━",
+        color=discord.Color.from_rgb(255, 170, 0)
+    )
+
+    embed2.add_field(
+        name="🎖️ Profile",
+        value="Check your stats & rank\nUsage: `.profile`",
+        inline=False
+    )
+
+    embed2.add_field(
+        name="🏆 Leaderboard",
+        value="Top players ranking\nUsage: `.leaderboard`",
+        inline=False
+    )
+
+    embed2.add_field(
+        name="🛑 Stop",
+        value="Stop ongoing game\nUsage: `.stop`",
+        inline=False
+    )
+
+    embed2.add_field(
+        name="📡 Ping",
+        value="Check bot latency\nUsage: `.ping`",
+        inline=False
+    )
+
+    embed2.set_footer(text="Page 2/2 • System")
+
+    await ctx.send(embed=embed1, view=HelpView([embed1, embed2]))
 
     @commands.command(name="stop")
     async def stop_prefix(self, ctx):
@@ -222,13 +271,33 @@ class System(commands.Cog):
     @commands.command(name="leaderboard")
     async def leaderboard(self, ctx):
 
-        data = get_leaderboard()
-        embed = discord.Embed(title="🏆 Leaderboard", color=discord.Color.blue())
+    data = get_leaderboard()
 
-        for i, (uid, matches, winrate) in enumerate(data):
-            embed.description = (embed.description or "") + f"{i+1}. <@{uid}> — {matches} bets ({winrate}%)\n"
+    embed = discord.Embed(
+        title="🏆 Player Leaderboard",
+        description="Top Players by Total Bets\n━━━━━━━━━━━━━━━━━━━━━━",
+        color=discord.Color.gold()
+    )
 
-        await ctx.send(embed=embed)
+    medals = ["🥇", "🥈", "🥉"]
+
+    desc = ""
+
+    for i, (uid, matches, winrate) in enumerate(data):
+
+        if i < 3:
+            rank = medals[i]
+        else:
+            rank = f"#{i+1}"
+
+        desc += (
+            f"{rank} <@{uid}>\n"
+            f"🎲 Bets: {matches} | 📊 Win Rate: {winrate}%\n\n"
+        )
+
+    embed.description += f"\n{desc}"
+
+    await ctx.send(embed=embed)
 
 
 async def setup(bot):
