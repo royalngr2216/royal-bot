@@ -21,15 +21,23 @@ def ensure_user(user_id):
             "losses": 0,
             "matches": 0,
             "total_won": 0,
-            "total_lost": 0
+            "total_lost": 0,
+            "streak": 0,
+            "best_streak": 0
         }
         stats_collection.insert_one(user)
 
     return user
 
 
+# 🔥 WIN (adds streak)
 def record_win(user_id, amount):
     ensure_user(user_id)
+
+    user = stats_collection.find_one({"user_id": str(user_id)})
+
+    new_streak = user.get("streak", 0) + 1
+    best_streak = max(new_streak, user.get("best_streak", 0))
 
     stats_collection.update_one(
         {"user_id": str(user_id)},
@@ -38,11 +46,16 @@ def record_win(user_id, amount):
                 "wins": 1,
                 "matches": 1,
                 "total_won": amount
+            },
+            "$set": {
+                "streak": new_streak,
+                "best_streak": best_streak
             }
         }
     )
 
 
+# ❌ LOSS (resets streak)
 def record_loss(user_id, amount):
     ensure_user(user_id)
 
@@ -53,12 +66,15 @@ def record_loss(user_id, amount):
                 "losses": 1,
                 "matches": 1,
                 "total_lost": amount
+            },
+            "$set": {
+                "streak": 0
             }
         }
     )
 
 
-# ✅ FIXED: Auto-create profile if missing
+# ✅ AUTO-CREATE PROFILE
 def get_profile(user_id):
     user_id = str(user_id)
 
@@ -71,7 +87,9 @@ def get_profile(user_id):
             "losses": 0,
             "matches": 0,
             "total_won": 0,
-            "total_lost": 0
+            "total_lost": 0,
+            "streak": 0,
+            "best_streak": 0
         }
         stats_collection.insert_one(user)
 
@@ -89,7 +107,9 @@ def get_profile(user_id):
         "matches": matches,
         "winrate": winrate,
         "total_won": user["total_won"],
-        "total_lost": user["total_lost"]
+        "total_lost": user["total_lost"],
+        "streak": user.get("streak", 0),
+        "best_streak": user.get("best_streak", 0)
     }
 
 
