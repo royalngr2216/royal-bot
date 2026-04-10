@@ -10,6 +10,48 @@ from utils.game_state import (
     ongoing_games
 )
 
+# ─────────────────────────
+# Role Rewards System
+# ─────────────────────────
+ROLE_REWARDS = {
+    5: 111111111111111111,     # Rookie
+    20: 222222222222222222,    # Grinder
+    50: 333333333333333333,    # Gambler
+    100: 444444444444444444,   # Addicted
+    200: 555555555555555555,   # High Roller
+    300: 666666666666666666,   # Elite
+    400: 777777777777777777,   # Casino King
+    500: 888888888888888888    # Royal
+}
+
+async def update_roles(member, matches):
+    sorted_roles = sorted(ROLE_REWARDS.items())
+
+    new_role_id = None
+
+    for required, role_id in sorted_roles:
+        if matches >= required:
+            new_role_id = role_id
+
+    if not new_role_id:
+        return
+
+    guild = member.guild
+    new_role = guild.get_role(new_role_id)
+
+    if not new_role:
+        return
+
+    # Remove old roles
+    for _, role_id in ROLE_REWARDS.items():
+        role = guild.get_role(role_id)
+        if role and role in member.roles:
+            await member.remove_roles(role)
+
+    # Add new role
+    await member.add_roles(new_role)
+
+
 # ─────────────────────────────────────────────
 # Pagination View
 # ─────────────────────────────────────────────
@@ -34,11 +76,9 @@ class System(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
-    # PREFIX HELP COMMAND
     @commands.command(name="help")
     async def help_prefix(self, ctx):
 
-        # ───────────────────────── PAGE 1 (Games)
         embed1 = discord.Embed(
             title="🎮  ROYAL ARENA",
             description="Navigate using ⬅️ ➡️ buttons\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━",
@@ -47,147 +87,63 @@ class System(commands.Cog):
 
         embed1.add_field(
             name="━━━━━━━━━━ 🪙 FLIP ━━━━━━━━━━",
-            value=(
-                "```yaml\n"
-                "Command : .flip\n"
-                "Type    : Coin Flipping Game\n"
-                "Win     : 50 / 50 chance for Everyone!\n"
-                "```"
-            ),
+            value="```yaml\nCommand : .flip\nType : Coin Flipping Game\nWin : 50 / 50 chance\n```",
             inline=False
         )
 
         embed1.add_field(
             name="━━━━━━━━━━ 🐉 RANDOMS ━━━━━━━━━━",
-            value=(
-                "```yaml\n"
-                "Command : .randoms @user\n"
-                "Action  : Both users type .pick\n"
-                "Result  : The Strongest Wins\n"
-                "```"
-            ),
+            value="```yaml\nCommand : .randoms @user\nAction : .pick\nResult : Strongest Wins\n```",
             inline=False
         )
 
         embed1.add_field(
             name="━━━━━━━━━━ 💀 DEATHROLL ━━━━━━━━━━",
-            value=(
-                "```yaml\n"
-                "Command : .deathroll @user (1/3/5) bet\n"
-                "Example : .deathroll @user 3 1m\n"
-                "Mode    : Whoever gets 1 loses the Match\n"
-                "```"
-            ),
+            value="```yaml\nCommand : .deathroll @user\nMode : Whoever gets 1 loses\n```",
             inline=False
         )
 
         embed1.add_field(
             name="━━━━━━━━━━ 🔢 CRACK ━━━━━━━━━━",
-            value=(
-                "```yaml\n"
-                "Command : .crack @user (1/3/5) bet\n"
-                "Action  : Both users type .guess\n"
-                "Goal    : Closest guess wins\n"
-                "```"
-            ),
+            value="```yaml\nCommand : .crack @user\nAction : .guess\nGoal : Closest wins\n```",
             inline=False
         )
 
         embed1.add_field(
             name="━━━━━━━━━━ 🎰 JACKPOT ━━━━━━━━━━",
-            value=(
-                "```yaml\n"
-                "Command : .jackpot\n"
-                "Join    : React 🎰\n"
-                "Mode    : Random Elimination\n"
-                "```"
-            ),
+            value="```yaml\nCommand : .jackpot\nJoin : React 🎰\nMode : Random\n```",
             inline=False
         )
 
         embed1.set_footer(text="Page 1/2 • Games")
 
-        # ───────────────────────── PAGE 2 (System)
         embed2 = discord.Embed(
             title="⚙️ System",
-            description="Administrative & Utility Commands\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━",
+            description="Commands\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━",
             color=discord.Color.from_rgb(255, 170, 0)
         )
 
-        embed2.add_field(
-            name="━━━━━━━━━━ 🛑 STOP ━━━━━━━━━━",
-            value=(
-                "```yaml\n"
-                "Command : .stop\n"
-                "Effect  : Stops all active games in this channel\n"
-                "Scope   : Only affects current channel\n"
-                "```"
-            ),
-            inline=False
-        )
-
-        embed2.add_field(
-            name="━━━━━━━━━━ 📡 PING ━━━━━━━━━━",
-            value=(
-                "```yaml\n"
-                "Command : .ping\n"
-                "Effect  : Shows bot latency\n"
-                "```"
-            ),
-            inline=False
-        )
-
-        embed2.add_field(
-            name="━━━━━━━━━━ 🎖️ PROFILE ━━━━━━━━━━",
-            value=(
-                "```yaml\n"
-                "Command : .profile @user(optional)\n"
-                "Shows   : Player stats & win ratio\n"
-                "```"
-            ),
-            inline=False
-        )
-
-        embed2.add_field(
-            name="━━━━━━━━━━ 🏆 LEADERBOARD ━━━━━━━━━━",
-            value=(
-                "```yaml\n"
-                "Command : .leaderboard\n"
-                "Shows   : Top players by total bets\n"
-                "```"
-            ),
-            inline=False
-        )
+        embed2.add_field(name="🛑 STOP", value="`.stop`", inline=False)
+        embed2.add_field(name="📡 PING", value="`.ping`", inline=False)
+        embed2.add_field(name="🎖️ PROFILE", value="`.profile`", inline=False)
+        embed2.add_field(name="🏆 LEADERBOARD", value="`.leaderboard`", inline=False)
 
         embed2.set_footer(text="Page 2/2 • System")
 
-        embeds = [embed1, embed2]
-        view = HelpView(embeds)
+        await ctx.send(embed=embed1, view=HelpView([embed1, embed2]))
 
-        await ctx.send(embed=embed1, view=view)
-
-    # PREFIX STOP COMMAND
     @commands.command(name="stop")
     async def stop_prefix(self, ctx):
 
         channel_id = ctx.channel.id
         stopped = False
 
-        for game_dict in [
-            crack_games,
-            randoms_games,
-            jackpot_games,
-            deathroll_games,
-            ongoing_games
-        ]:
+        for game_dict in [crack_games, randoms_games, jackpot_games, deathroll_games, ongoing_games]:
             if channel_id in game_dict:
                 del game_dict[channel_id]
                 stopped = True
 
-        if stopped:
-            await ctx.send("🛑 All games in this channel have been stopped.")
-        else:
-            await ctx.send("No active games in this channel.")
+        await ctx.send("🛑 Stopped" if stopped else "No active games.")
 
     @commands.command(name="profile")
     async def profile(self, ctx, member: discord.Member = None):
@@ -197,130 +153,34 @@ class System(commands.Cog):
 
         stats = get_profile(member.id)
 
-        if not stats:
-            await ctx.send("This user has no recorded matches.")
-            return
-
         embed = discord.Embed(
             title="🎖️ Player Profile",
-            description=f"Stats for **{member.display_name}**",
+            description=f"{member.display_name}",
             color=discord.Color.gold()
         )
 
         embed.set_thumbnail(url=member.display_avatar.url)
 
-        embed.add_field(name="🎲 Total Bets", value=stats["matches"], inline=True)
+        embed.add_field(name="🎲 Bets", value=stats["matches"], inline=True)
         embed.add_field(name="💀 Losses", value=stats["losses"], inline=True)
-        embed.add_field(name="📊 Win Rate", value=f"{stats['winrate']}%", inline=False)
-        embed.add_field(name="🔥 Current Streak", value=stats.get("streak", 0), inline=True)
-        embed.add_field(name="🏅 Best Streak", value=stats.get("best_streak", 0), inline=True)
-        embed.add_field(name="📉 Total Lost", value=f"{stats['total_lost']:,}", inline=True)
-
-        embed.set_footer(text="Game Arena Competitive Stats")
+        embed.add_field(name="📊 Winrate", value=f"{stats['winrate']}%", inline=False)
+        embed.add_field(name="🔥 Streak", value=stats.get("streak", 0), inline=True)
+        embed.add_field(name="🏅 Best", value=stats.get("best_streak", 0), inline=True)
 
         await ctx.send(embed=embed)
 
     @commands.command(name="leaderboard")
     async def leaderboard(self, ctx):
 
-        leaderboard_data = get_leaderboard()
+        data = get_leaderboard()
 
-        if not leaderboard_data:
-            await ctx.send("No players recorded yet.")
-            return
+        embed = discord.Embed(title="🏆 Leaderboard", color=discord.Color.blue())
 
-        embed = discord.Embed(
-            title="🏆 Player Leaderboard",
-            description="Top Players by Total Bets\n",
-            color=discord.Color.blue()
-        )
-
-        medals = ["🥇", "🥈", "🥉"]
-
-        for index, (user_id, matches, winrate) in enumerate(leaderboard_data):
-
-            name = f"<@{user_id}>"
-
-            if index < 3:
-                rank_icon = medals[index]
-            else:
-                rank_icon = f"`#{index + 1}`"
-
-            embed.description += (
-                f"{rank_icon} {name}\n"
-                f"🎲 Bets: {matches} | 📊 Win Rate: {winrate}%\n\n"
-            )
-            
-        embed.set_footer(text="Only official completed matches are counted")
+        for i, (uid, matches, winrate) in enumerate(data):
+            embed.description = (embed.description or "") + f"{i+1}. <@{uid}> — {matches} bets ({winrate}%)\n"
 
         await ctx.send(embed=embed)
 
-    @commands.command(name="rewards")
-    async def rewards(self, ctx):
 
-        embed = discord.Embed(
-        title="🎖️ Royal Arena Rank Rewards",
-        description="Progress through levels and unlock exclusive roles.\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━",
-        color=discord.Color.from_rgb(255, 215, 0)
-        )
-
-        embed.add_field(
-        name="👑 Royal",
-        value="`Level 500+`",
-        inline=False
-        )
-
-        embed.add_field(
-        name="💎 Casino King",
-        value="`Level 400+`",
-        inline=False
-        )
-
-        embed.add_field(
-        name="🔥 Elite",
-        value="`Level 300+`",
-        inline=False
-        )
-
-        embed.add_field(
-        name="💰 High Roller",
-        value="`Level 200+`",
-        inline=False
-        )
-
-        embed.add_field(
-        name="🎲 Addicted",
-        value="`Level 100+`",
-        inline=False
-        )
-
-        embed.add_field(
-        name="🃏 Gambler",
-        value="`Level 50+`",
-        inline=False
-        )
-
-        embed.add_field(
-        name="⚙️ Grinder",
-        value="`Level 20+`",
-        inline=False
-        )
-
-        embed.add_field(
-        name="🌱 Rookie",
-        value="`Level 5+`",
-        inline=False
-        )
-
-        embed.add_field(
-        name="👤 Member",
-        value="Default role",
-        inline=False
-        )
-
-        embed.set_footer(text="Climb the ranks by playing games and increasing your level")
-
-        await ctx.send(embed=embed)
-    
 async def setup(bot):
     await bot.add_cog(System(bot))
