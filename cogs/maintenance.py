@@ -28,7 +28,8 @@ class Maintenance(commands.Cog):
 
     @commands.Cog.listener()
     async def on_command(self, ctx):
-        if self.maintenance and ctx.command.name not in ["online"]:
+        # ✅ FIXED LINE (owner is NOT blocked)
+        if self.maintenance and ctx.author.id != self.owner_id:
             await ctx.send("🛠️ Bot is currently under maintenance. Please try later.")
             raise commands.CheckFailure()
 
