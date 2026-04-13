@@ -34,6 +34,11 @@ intents.message_content = True
 intents.members = True   # ✅ ADD THIS
 
 class MyBot(commands.Bot):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.maintenance = False   # ✅ ADDED
+        self.owner_id = 1287545546231255092  # 🔴 PUT YOUR DISCORD ID HERE
+
     async def setup_hook(self):
         # Load all cogs safely
         if os.path.exists("./cogs"):
@@ -44,6 +49,11 @@ class MyBot(commands.Bot):
                         print(f"✅ Loaded cog: {file}")
                     except Exception as e:
                         print(f"❌ Failed to load {file}: {e}")
+
+    async def on_command(self, ctx):  # ✅ ADDED (GLOBAL BLOCK)
+        if self.maintenance and ctx.command.name not in ["online", "offline"]:
+            await ctx.send("🛠️ Bot is currently under maintenance. Please try later.")
+            raise commands.CheckFailure()
 
 bot = MyBot(
     command_prefix=".",
