@@ -11,11 +11,42 @@ class Bomb(commands.Cog):
 
         self.death_messages = [
             "💀 {user} held it too long... BOOM!",
-            "🔥 {user} got nervous... exploded!",
-            "💥 {user} fumbled the bomb!",
-            "☠️ {user} tried to act cool... didn't work.",
+            "🔥 {user} panicked and exploded!",
+            "💥 {user} failed the timing!",
+            "☠️ {user} froze... and died.",
             "🎇 {user} became fireworks!",
         ]
+
+    async def start_timer(self, ctx, channel_id):
+        await asyncio.sleep(5)
+
+        game = self.games.get(channel_id)
+        if not game:
+            return
+
+        holder = game["holder"]
+
+        msg = random.choice(self.death_messages).format(user=holder.mention)
+        await ctx.send(msg)
+
+        game["players"].remove(holder)
+
+        if len(game["players"]) == 1:
+            winner = game["players"][0]
+            await ctx.send(f"🏆 **{winner.mention} wins the game!**")
+            self.games.pop(channel_id)
+            return
+
+        # New round
+        new_holder = random.choice(game["players"])
+        game["holder"] = new_holder
+        game["turn"] = 0
+        game["explode_at"] = random.randint(len(game["players"])*3, len(game["players"])*5)
+
+        await ctx.send(f"💣 New round! {new_holder.mention} has the bomb!")
+
+        # Restart timer
+        game["timer"] = asyncio.create_task(self.start_timer(ctx, channel_id))
 
     @commands.command()
     async def bomb(self, ctx):
@@ -45,7 +76,7 @@ class Bomb(commands.Cog):
             "last": deque(maxlen=3),
             "turn": 0,
             "explode_at": random.randint(len(users)*3, len(users)*5),
-            "active": True
+            "timer": None
         }
 
         self.games[ctx.channel.id] = game
@@ -53,14 +84,17 @@ class Bomb(commands.Cog):
         await ctx.send(
             f"💣 **The bomb is LIVE!**\n"
             f"🎯 Holder: {holder.mention}\n"
-            f"⚠️ Pass quickly using `.pass @user`"
+            f"⏱ You have **5 seconds** to pass!"
         )
+
+        # Start timer
+        game["timer"] = asyncio.create_task(self.start_timer(ctx, ctx.channel.id))
 
     @commands.command(name="pass")
     async def pass_bomb(self, ctx, member: discord.Member):
         game = self.games.get(ctx.channel.id)
 
-        if not game or not game["active"]:
+        if not game:
             return await ctx.send("❌ No active bomb game!")
 
         if ctx.author != game["holder"]:
@@ -73,18 +107,21 @@ class Bomb(commands.Cog):
             return await ctx.send("❌ You can't pass to yourself!")
 
         if member in game["last"]:
-            return await ctx.send("❌ That player just had the bomb! Choose someone else.")
+            return await ctx.send("❌ That player recently had the bomb!")
 
-        # Update history
+        # Cancel old timer
+        if game["timer"]:
+            game["timer"].cancel()
+
         game["last"].append(game["holder"])
         game["holder"] = member
         game["turn"] += 1
 
-        # 🔥 Random tension warning
-        if random.random() < 0.3:
-            await ctx.send("🔥 **The bomb is getting HOT...**")
+        # 🔥 tension message
+        if random.random() < 0.4:
+            await ctx.send("🔥 **The bomb is heating up...**")
 
-        # 💥 Explosion check
+        # Explosion by turn
         if game["turn"] >= game["explode_at"]:
             msg = random.choice(self.death_messages).format(user=member.mention)
             await ctx.send(msg)
@@ -93,28 +130,26 @@ class Bomb(commands.Cog):
 
             if len(game["players"]) == 1:
                 winner = game["players"][0]
-                await ctx.send(f"🏆 **{winner.mention} is the last survivor!**")
+                await ctx.send(f"🏆 **{winner.mention} wins!**")
                 self.games.pop(ctx.channel.id)
                 return
 
-            # New round
             new_holder = random.choice(game["players"])
             game["holder"] = new_holder
             game["turn"] = 0
-            game["explode_at"] = random.randint(len(game["players"])*3, len(game["players"])*5)
 
-            return await ctx.send(
-                f"💣 **New Round!**\n"
-                f"🎯 {new_holder.mention} starts with the bomb!"
-            )
+            await ctx.send(f"💣 New round! {new_holder.mention} has the bomb!")
 
-        # ⏱ Countdown vibe
-        fake_timer = random.randint(2, 6)
+            game["timer"] = asyncio.create_task(self.start_timer(ctx, ctx.channel.id))
+            return
 
         await ctx.send(
-            f"➡️ {ctx.author.mention} passed the bomb to {member.mention}\n"
-            f"⏱ **Tick... {fake_timer}s**"
+            f"➡️ {ctx.author.mention} ➜ {member.mention}\n"
+            f"⏱ **5s to pass!**"
         )
+
+        # Restart timer
+        game["timer"] = asyncio.create_task(self.start_timer(ctx, ctx.channel.id))
 
 async def setup(bot):
     await bot.add_cog(Bomb(bot))
