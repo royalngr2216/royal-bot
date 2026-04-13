@@ -50,16 +50,20 @@ class MyBot(commands.Bot):
                     except Exception as e:
                         print(f"❌ Failed to load {file}: {e}")
 
-    async def on_command(self, ctx):  # ✅ ADDED (GLOBAL BLOCK)
-        if self.maintenance and ctx.command.name not in ["online", "offline"]:
-            await ctx.send("🛠️ Bot is currently under maintenance. Please try later.")
-            raise commands.CheckFailure()
-
 bot = MyBot(
     command_prefix=".",
     intents=intents,
     help_command=None
 )
+
+# ✅ GLOBAL MAINTENANCE CHECK (THIS IS THE FIX)
+@bot.check
+async def global_check(ctx):
+    if ctx.bot.maintenance and ctx.command.name not in ["online", "offline"]:
+        await ctx.send("🛠️ Bot is currently under maintenance. Please try later.")
+        return False
+    return True
+
 
 @bot.event
 async def on_ready():
