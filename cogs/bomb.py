@@ -45,7 +45,6 @@ class Bomb(commands.Cog):
 
         await ctx.send(f"💣 New round! {new_holder.mention} has the bomb!")
 
-        # Restart timer
         game["timer"] = asyncio.create_task(self.start_timer(ctx, channel_id))
 
     @commands.command()
@@ -87,7 +86,6 @@ class Bomb(commands.Cog):
             f"⏱ You have **5 seconds** to pass!"
         )
 
-        # Start timer
         game["timer"] = asyncio.create_task(self.start_timer(ctx, ctx.channel.id))
 
     @commands.command(name="pass")
@@ -106,10 +104,19 @@ class Bomb(commands.Cog):
         if member == ctx.author:
             return await ctx.send("❌ You can't pass to yourself!")
 
-        if member in game["last"]:
-            return await ctx.send("❌ That player recently had the bomb!")
+        # 🧠 Smart restriction logic
+        valid_players = [
+            p for p in game["players"]
+            if p != ctx.author and p not in game["last"]
+        ]
 
-        # Cancel old timer
+        if valid_players:
+            if member not in valid_players:
+                return await ctx.send("❌ That player recently had the bomb!")
+        else:
+            await ctx.send("⚠️ No valid players left — restriction lifted!")
+
+        # Cancel timer
         if game["timer"]:
             game["timer"].cancel()
 
@@ -117,11 +124,11 @@ class Bomb(commands.Cog):
         game["holder"] = member
         game["turn"] += 1
 
-        # 🔥 tension message
+        # 🔥 Tension message
         if random.random() < 0.4:
             await ctx.send("🔥 **The bomb is heating up...**")
 
-        # Explosion by turn
+        # 💥 Explosion by turn
         if game["turn"] >= game["explode_at"]:
             msg = random.choice(self.death_messages).format(user=member.mention)
             await ctx.send(msg)
@@ -148,8 +155,8 @@ class Bomb(commands.Cog):
             f"⏱ **5s to pass!**"
         )
 
-        # Restart timer
         game["timer"] = asyncio.create_task(self.start_timer(ctx, ctx.channel.id))
+
 
 async def setup(bot):
     await bot.add_cog(Bomb(bot))
