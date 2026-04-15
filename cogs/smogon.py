@@ -3,11 +3,9 @@ from discord.ext import commands
 from discord.ui import View
 import aiohttp
 import asyncio
-import re
-import json
 
 # ─────────────────────────
-# CACHE (INSTANT RESPONSES)
+# CACHE
 # ─────────────────────────
 cache = {}
 
@@ -25,58 +23,7 @@ def fix_pokemon(name):
     return name, name
 
 # ─────────────────────────
-# SMOGON FETCH (FAST JSON)
-# ─────────────────────────
-
-async def fetch_smogon(pokemon, gen):
-    url = f"https://www.smogon.com/dex/{gen}/pokemon/{pokemon}/"
-    async with aiohttp.ClientSession() as session:
-        async with session.get(url) as r:
-            if r.status != 200:
-                return None
-            return await r.text()
-
-def extract_ou_sets(html):
-    if not html:
-        return ["No sets found."]
-
-    match = re.search(r"window\.__dexSettings = ({.*?});", html)
-    if not match:
-        return ["No sets found."]
-
-    data = json.loads(match.group(1))
-    strategies = data.get("strategies", [])
-
-    results = []
-
-    for strat in strategies:
-        format_name = strat.get("format", "")
-
-        if "OU" not in format_name and "National Dex" not in format_name:
-            continue
-
-        name = strat.get("name", "Set")
-        moves = strat.get("moves", [])
-        item = strat.get("items", [""])[0]
-        ability = strat.get("abilities", [""])[0]
-        evs = strat.get("evconfigs", [""])[0]
-
-        move_text = "\n".join(f"• {m}" for m in moves[:4])
-
-        text = (
-            f"**{name} ({format_name})**\n"
-            f"Item: {item}\n"
-            f"Ability: {ability}\n"
-            f"EVs: {evs}\n"
-            f"{move_text}"
-        )
-
-        results.append(text)
-
-    return results[:2] if results else ["No OU sets found."]
-
-# ─────────────────────────
-# BUTTON VIEW
+# BUTTON VIEW (LINKS ONLY)
 # ─────────────────────────
 
 class SmogonView(View):
@@ -84,33 +31,32 @@ class SmogonView(View):
         super().__init__(timeout=60)
         self.pokemon = pokemon
 
-    async def send_sets(self, interaction, gen, label):
-        html = await fetch_smogon(self.pokemon, gen)
-        sets = extract_ou_sets(html)
+    async def send_link(self, interaction, gen, label):
+        url = f"https://www.smogon.com/dex/{gen}/pokemon/{self.pokemon}/"
 
         embed = discord.Embed(
-            title=f"{self.pokemon.title()} - {label} OU Sets",
+            title=f"{self.pokemon.title()} - {label}",
+            description=f"[Click here for Smogon sets]({url})",
             color=0x00ffcc
         )
-        embed.description = "\n\n".join(sets)
 
         await interaction.response.edit_message(embed=embed)
 
     @discord.ui.button(label="ORAS", style=discord.ButtonStyle.primary)
     async def oras(self, interaction, button):
-        await self.send_sets(interaction, "xy", "ORAS")
+        await self.send_link(interaction, "xy", "ORAS")
 
     @discord.ui.button(label="SM", style=discord.ButtonStyle.success)
     async def sm(self, interaction, button):
-        await self.send_sets(interaction, "sm", "SM")
+        await self.send_link(interaction, "sm", "SM")
 
     @discord.ui.button(label="SS", style=discord.ButtonStyle.secondary)
     async def ss(self, interaction, button):
-        await self.send_sets(interaction, "ss", "SS")
+        await self.send_link(interaction, "ss", "SS")
 
     @discord.ui.button(label="NatDex", style=discord.ButtonStyle.danger)
     async def natdex(self, interaction, button):
-        await self.send_sets(interaction, "sv", "National Dex")
+        await self.send_link(interaction, "sv", "National Dex")
 
 # ─────────────────────────
 # MAIN COG
@@ -123,26 +69,25 @@ class Smogon(commands.Cog):
     @commands.command()
     async def smogon(self, ctx, *, name):
 
-        # ⚡ instant response
         msg = await ctx.send("⏳ Searching...")
 
-        # ⚡ cache check
+        # CACHE
         if name.lower() in cache:
-            return await msg.edit(embed=cache[name.lower()])
+            return await msg.edit(content="", embed=cache[name.lower()])
 
         poke, gif = fix_pokemon(name)
         api = normalize(name)
 
         async with aiohttp.ClientSession() as session:
 
-            # ⚡ PARALLEL REQUESTS
-            pokemon_task = session.get(f"https://pokeapi.co/api/v2/pokemon/{poke}")
-            move_task = session.get(f"https://pokeapi.co/api/v2/move/{api}")
-            item_task = session.get(f"https://pokeapi.co/api/v2/item/{api}")
-            ability_task = session.get(f"https://pokeapi.co/api/v2/ability/{api}")
+            # PARALLEL REQUESTS
+            p_task = session.get(f"https://pokeapi.co/api/v2/pokemon/{poke}")
+            m_task = session.get(f"https://pokeapi.co/api/v2/move/{api}")
+            i_task = session.get(f"https://pokeapi.co/api/v2/item/{api}")
+            a_task = session.get(f"https://pokeapi.co/api/v2/ability/{api}")
 
             p_res, m_res, i_res, a_res = await asyncio.gather(
-                pokemon_task, move_task, item_task, ability_task
+                p_task, m_task, i_task, a_task
             )
 
             # ───── POKEMON ─────
@@ -166,7 +111,7 @@ class Smogon(commands.Cog):
                 embed.add_field(name="Stats", value=stats, inline=False)
 
                 cache[name.lower()] = embed
-                return await msg.edit(embed=embed, view=SmogonView(poke))
+                return await msg.edit(content="", embed=embed, view=SmogonView(poke))
 
             # ───── MOVE ─────
             if m_res.status == 200:
@@ -192,7 +137,7 @@ class Smogon(commands.Cog):
                 embed.add_field(name="Description", value=desc, inline=False)
 
                 cache[name.lower()] = embed
-                return await msg.edit(embed=embed)
+                return await msg.edit(content="", embed=embed)
 
             # ───── ITEM ─────
             if i_res.status == 200:
@@ -208,22 +153,43 @@ class Smogon(commands.Cog):
                 embed.add_field(name="Description", value=desc, inline=False)
 
                 cache[name.lower()] = embed
-                return await msg.edit(embed=embed)
+                return await msg.edit(content="", embed=embed)
 
-            # ───── ABILITY ─────
-            if a_res.status == 200:
-                data = await a_res.json()
+            # ───── ABILITY (FIXED) ─────
+            ability_name = normalize(name)
 
-                desc = next(
-                    (e["effect"] for e in data["effect_entries"] if e["language"]["name"] == "en"),
-                    "No description"
-                )
+            # try normal
+            async with session.get(f"https://pokeapi.co/api/v2/ability/{ability_name}") as r:
+                if r.status == 200:
+                    data = await r.json()
 
-                embed = discord.Embed(title=name.title(), color=0x9b59b6)
-                embed.add_field(name="Ability Effect", value=desc, inline=False)
+                    desc = next(
+                        (e["effect"] for e in data["effect_entries"] if e["language"]["name"] == "en"),
+                        "No description"
+                    )
 
-                cache[name.lower()] = embed
-                return await msg.edit(embed=embed)
+                    embed = discord.Embed(title=name.title(), color=0x9b59b6)
+                    embed.add_field(name="Ability Effect", value=desc, inline=False)
+
+                    cache[name.lower()] = embed
+                    return await msg.edit(content="", embed=embed)
+
+            # fallback
+            alt = ability_name.replace("-", "")
+            async with session.get(f"https://pokeapi.co/api/v2/ability/{alt}") as r2:
+                if r2.status == 200:
+                    data = await r2.json()
+
+                    desc = next(
+                        (e["effect"] for e in data["effect_entries"] if e["language"]["name"] == "en"),
+                        "No description"
+                    )
+
+                    embed = discord.Embed(title=name.title(), color=0x9b59b6)
+                    embed.add_field(name="Ability Effect", value=desc, inline=False)
+
+                    cache[name.lower()] = embed
+                    return await msg.edit(content="", embed=embed)
 
         await msg.edit(content="❌ Not found.")
 
