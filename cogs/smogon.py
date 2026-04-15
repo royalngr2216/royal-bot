@@ -2,44 +2,77 @@ import discord
 from discord.ext import commands
 from discord.ui import View
 import aiohttp
+from bs4 import BeautifulSoup
 
 # ─────────────────────────
-# NORMALIZATION FUNCTIONS
+# NORMALIZATION
 # ─────────────────────────
 
 def normalize_name(name: str):
-    name = name.lower().strip()
-    name = name.replace(" ", "-")
-
-    while "--" in name:
-        name = name.replace("--", "-")
-
-    return name
-
+    return name.lower().replace(" ", "-").strip()
 
 def fix_pokemon_name(name: str):
     name = normalize_name(name)
 
-    # Handle mega forms
     if "mega" in name:
         base = name.replace("-mega", "").replace("mega", "")
-        return base, name  # (pokeapi_name, gif_name)
+        return base, name
 
     return name, name
 
-
 def normalize_api_name(name: str):
-    name = name.lower().strip()
-    name = name.replace(" ", "-")
+    return name.lower().replace(" ", "-").strip()
 
-    # Special fixes (expand later if needed)
-    fixes = {
-        "will-o-wisp": "will-o-wisp",
-        "air-balloon": "air-balloon"
-    }
+# ─────────────────────────
+# FETCH SMOGON SETS
+# ─────────────────────────
 
-    return fixes.get(name, name)
+async def fetch_smogon_sets(pokemon, gen):
+    url = f"https://www.smogon.com/dex/{gen}/pokemon/{pokemon}/"
 
+    async with aiohttp.ClientSession() as session:
+        async with session.get(url) as resp:
+            if resp.status != 200:
+                return ["No sets found."]
+            html = await resp.text()
+
+    soup = BeautifulSoup(html, "html.parser")
+
+    sets = []
+
+    # Smogon uses "Moveset" sections
+    for moveset in soup.select(".Moveset"):
+        name = moveset.find("h2")
+        if not name:
+            continue
+
+        set_name = name.text.strip()
+
+        details = []
+
+        # Moves
+        moves = [m.text.strip() for m in moveset.select(".MoveList li")]
+        if moves:
+            details.append("**Moves:** " + ", ".join(moves))
+
+        # Item
+        item = moveset.select_one(".Item")
+        if item:
+            details.append(f"**Item:** {item.text.strip()}")
+
+        # Ability
+        ability = moveset.select_one(".Ability")
+        if ability:
+            details.append(f"**Ability:** {ability.text.strip()}")
+
+        # EVs
+        evs = moveset.select_one(".EvConfig")
+        if evs:
+            details.append(f"**EVs:** {evs.text.strip()}")
+
+        sets.append(f"**{set_name}**\n" + "\n".join(details))
+
+    return sets[:3] if sets else ["No structured sets found."]
 
 # ─────────────────────────
 # BUTTON VIEW
@@ -51,13 +84,14 @@ class SmogonView(View):
         self.pokemon = pokemon
 
     async def send_sets(self, interaction, gen, label):
-        url = f"https://www.smogon.com/dex/{gen}/pokemon/{self.pokemon}/"
+        sets = await fetch_smogon_sets(self.pokemon, gen)
 
         embed = discord.Embed(
-            title=f"{self.pokemon.title()} - {label}",
-            description=f"[Click here for Smogon sets]({url})",
+            title=f"{self.pokemon.title()} - {label} Sets",
             color=0x00ffcc
         )
+
+        embed.description = "\n\n".join(sets)
 
         await interaction.response.edit_message(embed=embed)
 
@@ -76,7 +110,6 @@ class SmogonView(View):
     @discord.ui.button(label="NatDex", style=discord.ButtonStyle.danger)
     async def natdex(self, interaction, button):
         await self.send_sets(interaction, "sv", "National Dex")
-
 
 # ─────────────────────────
 # MAIN COG
@@ -125,6 +158,11 @@ class Smogon(commands.Cog):
                 if r.status == 200:
                     data = await r.json()
 
+                    desc = next(
+                        (e["effect"] for e in data["effect_entries"] if e["language"]["name"] == "en"),
+                        "No description"
+                    )
+
                     embed = discord.Embed(
                         title=name.title(),
                         color=0xf1c40f
@@ -133,11 +171,7 @@ class Smogon(commands.Cog):
                     embed.add_field(name="Power", value=data["power"])
                     embed.add_field(name="Accuracy", value=data["accuracy"])
                     embed.add_field(name="PP", value=data["pp"])
-                    embed.add_field(
-                        name="Description",
-                        value=data["effect_entries"][0]["effect"],
-                        inline=False
-                    )
+                    embed.add_field(name="Description", value=desc, inline=False)
 
                     await ctx.send(embed=embed)
                     return
@@ -148,26 +182,23 @@ class Smogon(commands.Cog):
                 if r.status == 200:
                     data = await r.json()
 
+                    desc = next(
+                        (e["effect"] for e in data["effect_entries"] if e["language"]["name"] == "en"),
+                        "No description"
+                    )
+
                     embed = discord.Embed(
                         title=name.title(),
                         color=0x2ecc71
                     )
                     embed.set_thumbnail(url=data["sprites"]["default"])
-                    embed.add_field(
-                        name="Description",
-                        value=data["effect_entries"][0]["effect"],
-                        inline=False
-                    )
+                    embed.add_field(name="Description", value=desc, inline=False)
 
                     await ctx.send(embed=embed)
                     return
 
-        await ctx.send("❌ Not found. Try Pokémon, move, or item.")
-
+        await ctx.send("❌ Not found.")
 
 # ─────────────────────────
-# SETUP
-# ─────────────────────────
-
 async def setup(bot):
     await bot.add_cog(Smogon(bot))
