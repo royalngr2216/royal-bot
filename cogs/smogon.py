@@ -2,7 +2,14 @@ import discord
 from discord.ext import commands
 from discord.ui import View
 import aiohttp
+import asyncio
 import re
+import json
+
+# ─────────────────────────
+# CACHE (INSTANT RESPONSES)
+# ─────────────────────────
+cache = {}
 
 # ─────────────────────────
 # NORMALIZATION
@@ -18,7 +25,7 @@ def fix_pokemon(name):
     return name, name
 
 # ─────────────────────────
-# FETCH SMOGON HTML
+# SMOGON FETCH (FAST JSON)
 # ─────────────────────────
 
 async def fetch_smogon(pokemon, gen):
@@ -29,28 +36,44 @@ async def fetch_smogon(pokemon, gen):
                 return None
             return await r.text()
 
-# ─────────────────────────
-# EXTRACT ONLY OU SETS
-# ─────────────────────────
-
 def extract_ou_sets(html):
     if not html:
         return ["No sets found."]
 
-    sections = re.findall(r"<h2.*?>(.*?)</h2>(.*?)</section>", html, re.S)
+    match = re.search(r"window\.__dexSettings = ({.*?});", html)
+    if not match:
+        return ["No sets found."]
+
+    data = json.loads(match.group(1))
+    strategies = data.get("strategies", [])
 
     results = []
 
-    for title, content in sections:
-        if "OU" not in title and "National Dex" not in title:
+    for strat in strategies:
+        format_name = strat.get("format", "")
+
+        if "OU" not in format_name and "National Dex" not in format_name:
             continue
 
-        clean = re.sub("<.*?>", "", content)
-        clean = re.sub("\n+", "\n", clean)
+        name = strat.get("name", "Set")
+        moves = strat.get("moves", [])
+        item = strat.get("items", [""])[0]
+        ability = strat.get("abilities", [""])[0]
+        evs = strat.get("evconfigs", [""])[0]
 
-        results.append(f"**{title.strip()}**\n{clean.strip()[:500]}")
+        move_text = "\n".join(f"• {m}" for m in moves[:4])
 
-    return results[:3] if results else ["No OU sets found."]
+        text = (
+            f"**{name} ({format_name})**\n"
+            f"Item: {item}\n"
+            f"Ability: {ability}\n"
+            f"EVs: {evs}\n"
+            f"{move_text}"
+        )
+
+        results.append(text)
+
+    return results[:2] if results else ["No OU sets found."]
 
 # ─────────────────────────
 # BUTTON VIEW
@@ -69,7 +92,6 @@ class SmogonView(View):
             title=f"{self.pokemon.title()} - {label} OU Sets",
             color=0x00ffcc
         )
-
         embed.description = "\n\n".join(sets)
 
         await interaction.response.edit_message(embed=embed)
@@ -100,102 +122,110 @@ class Smogon(commands.Cog):
 
     @commands.command()
     async def smogon(self, ctx, *, name):
+
+        # ⚡ instant response
+        msg = await ctx.send("⏳ Searching...")
+
+        # ⚡ cache check
+        if name.lower() in cache:
+            return await msg.edit(embed=cache[name.lower()])
+
         poke, gif = fix_pokemon(name)
         api = normalize(name)
 
-        # ───── POKEMON ─────
-        async with aiohttp.ClientSession() as s:
-            async with s.get(f"https://pokeapi.co/api/v2/pokemon/{poke}") as r:
-                if r.status == 200:
-                    data = await r.json()
+        async with aiohttp.ClientSession() as session:
 
-                    gif_url = f"https://play.pokemonshowdown.com/sprites/xyani/{gif}.gif"
+            # ⚡ PARALLEL REQUESTS
+            pokemon_task = session.get(f"https://pokeapi.co/api/v2/pokemon/{poke}")
+            move_task = session.get(f"https://pokeapi.co/api/v2/move/{api}")
+            item_task = session.get(f"https://pokeapi.co/api/v2/item/{api}")
+            ability_task = session.get(f"https://pokeapi.co/api/v2/ability/{api}")
 
-                    types = [t["type"]["name"].title() for t in data["types"]]
-                    abilities = [a["ability"]["name"].title() for a in data["abilities"]]
+            p_res, m_res, i_res, a_res = await asyncio.gather(
+                pokemon_task, move_task, item_task, ability_task
+            )
 
-                    stats = "\n".join(
-                        f"{s['stat']['name'].upper()}: {s['base_stat']}"
-                        for s in data["stats"]
-                    )
+            # ───── POKEMON ─────
+            if p_res.status == 200:
+                data = await p_res.json()
 
-                    embed = discord.Embed(title=name.title(), color=0x3498db)
-                    embed.set_image(url=gif_url)
-                    embed.add_field(name="Type", value=", ".join(types))
-                    embed.add_field(name="Abilities", value=", ".join(abilities))
-                    embed.add_field(name="Stats", value=stats, inline=False)
+                gif_url = f"https://play.pokemonshowdown.com/sprites/xyani/{gif}.gif"
 
-                    await ctx.send(embed=embed, view=SmogonView(poke))
-                    return
+                types = [t["type"]["name"].title() for t in data["types"]]
+                abilities = [a["ability"]["name"].title() for a in data["abilities"]]
 
-        # ───── MOVE ─────
-        async with aiohttp.ClientSession() as s:
-            async with s.get(f"https://pokeapi.co/api/v2/move/{api}") as r:
-                if r.status == 200:
-                    data = await r.json()
+                stats = "\n".join(
+                    f"{s['stat']['name'].upper()}: {s['base_stat']}"
+                    for s in data["stats"]
+                )
 
-                    effect_entry = next(
-                        (e for e in data["effect_entries"] if e["language"]["name"] == "en"),
-                        None
-                    )
+                embed = discord.Embed(title=name.title(), color=0x3498db)
+                embed.set_image(url=gif_url)
+                embed.add_field(name="Type", value=", ".join(types))
+                embed.add_field(name="Abilities", value=", ".join(abilities))
+                embed.add_field(name="Stats", value=stats, inline=False)
 
-                    if effect_entry:
-                        desc = effect_entry["effect"]
+                cache[name.lower()] = embed
+                return await msg.edit(embed=embed, view=SmogonView(poke))
 
-                        if "$effect_chance" in desc:
-                            chance = data.get("effect_chance", "")
-                            desc = desc.replace("$effect_chance", str(chance))
+            # ───── MOVE ─────
+            if m_res.status == 200:
+                data = await m_res.json()
 
-                        desc = desc.replace("\n", " ").replace("  ", " ")
-                    else:
-                        desc = "No description"
+                effect_entry = next(
+                    (e for e in data["effect_entries"] if e["language"]["name"] == "en"),
+                    None
+                )
 
-                    embed = discord.Embed(title=name.title(), color=0xf1c40f)
-                    embed.add_field(name="Type", value=data["type"]["name"].title())
-                    embed.add_field(name="Power", value=data["power"])
-                    embed.add_field(name="Accuracy", value=data["accuracy"])
-                    embed.add_field(name="PP", value=data["pp"])
-                    embed.add_field(name="Description", value=desc, inline=False)
+                desc = effect_entry["effect"] if effect_entry else "No description"
 
-                    await ctx.send(embed=embed)
-                    return
+                if "$effect_chance" in desc:
+                    desc = desc.replace("$effect_chance", str(data.get("effect_chance", "")))
 
-        # ───── ITEM ─────
-        async with aiohttp.ClientSession() as s:
-            async with s.get(f"https://pokeapi.co/api/v2/item/{api}") as r:
-                if r.status == 200:
-                    data = await r.json()
+                desc = desc.replace("\n", " ").replace("  ", " ")
 
-                    desc = next(
-                        (e["effect"] for e in data["effect_entries"] if e["language"]["name"] == "en"),
-                        "No description"
-                    )
+                embed = discord.Embed(title=name.title(), color=0xf1c40f)
+                embed.add_field(name="Type", value=data["type"]["name"].title())
+                embed.add_field(name="Power", value=data["power"])
+                embed.add_field(name="Accuracy", value=data["accuracy"])
+                embed.add_field(name="PP", value=data["pp"])
+                embed.add_field(name="Description", value=desc, inline=False)
 
-                    embed = discord.Embed(title=name.title(), color=0x2ecc71)
-                    embed.set_thumbnail(url=data["sprites"]["default"])
-                    embed.add_field(name="Description", value=desc, inline=False)
+                cache[name.lower()] = embed
+                return await msg.edit(embed=embed)
 
-                    await ctx.send(embed=embed)
-                    return
+            # ───── ITEM ─────
+            if i_res.status == 200:
+                data = await i_res.json()
 
-        # ───── ABILITY ─────
-        async with aiohttp.ClientSession() as s:
-            async with s.get(f"https://pokeapi.co/api/v2/ability/{api}") as r:
-                if r.status == 200:
-                    data = await r.json()
+                desc = next(
+                    (e["effect"] for e in data["effect_entries"] if e["language"]["name"] == "en"),
+                    "No description"
+                )
 
-                    desc = next(
-                        (e["effect"] for e in data["effect_entries"] if e["language"]["name"] == "en"),
-                        "No description"
-                    )
+                embed = discord.Embed(title=name.title(), color=0x2ecc71)
+                embed.set_thumbnail(url=data["sprites"]["default"])
+                embed.add_field(name="Description", value=desc, inline=False)
 
-                    embed = discord.Embed(title=name.title(), color=0x9b59b6)
-                    embed.add_field(name="Ability Effect", value=desc, inline=False)
+                cache[name.lower()] = embed
+                return await msg.edit(embed=embed)
 
-                    await ctx.send(embed=embed)
-                    return
+            # ───── ABILITY ─────
+            if a_res.status == 200:
+                data = await a_res.json()
 
-        await ctx.send("❌ Not found.")
+                desc = next(
+                    (e["effect"] for e in data["effect_entries"] if e["language"]["name"] == "en"),
+                    "No description"
+                )
+
+                embed = discord.Embed(title=name.title(), color=0x9b59b6)
+                embed.add_field(name="Ability Effect", value=desc, inline=False)
+
+                cache[name.lower()] = embed
+                return await msg.edit(embed=embed)
+
+        await msg.edit(content="❌ Not found.")
 
 # ─────────────────────────
 async def setup(bot):
