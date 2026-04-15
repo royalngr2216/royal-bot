@@ -15,7 +15,7 @@ SPECIAL_PLAYERS = {
 SORTED_POKEMON = sorted(POKEMON_LIST, key=lambda p: p.total_stats, reverse=True)
 
 # Special players pool (max 650 BST so it doesn't look sus)
-SPECIAL_POOL = [p for p in POKEMON_LIST if p.total_stats <= 650 and p.total_stats >= 500]
+SPECIAL_POOL = [p for p in POKEMON_LIST if p.total_stats <= 680 and p.total_stats >= 500]
 
 def parse_bet(bet_str: str):
     bet_str = bet_str.lower().replace(",", "")
