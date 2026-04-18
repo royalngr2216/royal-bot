@@ -14,8 +14,8 @@ SPECIAL_PLAYERS = {
 # Sort Pokémon by strength
 SORTED_POKEMON = sorted(POKEMON_LIST, key=lambda p: p.total_stats, reverse=True)
 
-# Special players pool (max 650 BST so it doesn't look sus)
-SPECIAL_POOL = [p for p in POKEMON_LIST if p.total_stats <= 620 and p.total_stats >= 500]
+# (kept, but expanded so fallback doesn't break high ranges)
+SPECIAL_POOL = [p for p in POKEMON_LIST if 450 <= p.total_stats <= 780]
 
 def parse_bet(bet_str: str):
     bet_str = bet_str.lower().replace(",", "")
@@ -91,14 +91,31 @@ class Randoms(commands.Cog):
             await ctx.send("You already picked this round.")
             return
 
+        # 🔥 UPDATED SPECIAL LOGIC
         if ctx.author.id in SPECIAL_PLAYERS:
-            pokemon = random.choice(SPECIAL_POOL)
+            roll = random.randint(1, 100)
+
+            if roll <= 25:
+                pool = [p for p in POKEMON_LIST if 450 <= p.total_stats <= 500]
+            elif roll <= 35:
+                pool = [p for p in POKEMON_LIST if 500 < p.total_stats <= 530]
+            elif roll <= 70:
+                pool = [p for p in POKEMON_LIST if 530 < p.total_stats <= 600]
+            elif roll <= 90:
+                pool = [p for p in POKEMON_LIST if 600 < p.total_stats <= 680]
+            else:
+                pool = [p for p in POKEMON_LIST if 680 < p.total_stats <= 780]
+
+            if not pool:
+                pool = SPECIAL_POOL  # safe fallback
+
+            pokemon = random.choice(pool)
+
         else:
             pokemon = random.choice(POKEMON_LIST)
 
         game["picks"][ctx.author] = pokemon
 
-        # 🔥 Clean Pokémon name for GIF URL
         clean_name = (
             pokemon.name.lower()
             .replace(" ", "")
@@ -108,7 +125,6 @@ class Randoms(commands.Cog):
 
         gif_url = f"https://play.pokemonshowdown.com/sprites/xyani/{clean_name}.gif"
 
-        # 🔥 Color based on strength
         if pokemon.total_stats < 400:
             embed_color = discord.Colour.green()
         elif pokemon.total_stats < 500:
@@ -133,7 +149,6 @@ class Randoms(commands.Cog):
 
         await ctx.send(embed=embed)
 
-        # Resolve round if both picked
         if len(game["picks"]) == 2:
             await self.resolve_round(ctx.channel.id)
 
