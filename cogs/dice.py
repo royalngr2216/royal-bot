@@ -2,6 +2,10 @@ import discord
 from discord.ext import commands
 import random
 
+# ─────────────────────────
+# Game Logic
+# ─────────────────────────
+
 class DiceGame:
     def __init__(self, p1, p2, target):
         self.p1 = p1
@@ -13,15 +17,16 @@ class DiceGame:
         self.finished = {p1.id: False, p2.id: False}
 
     def roll(self, user):
-        value = random.randint(1, 21)
+        value = random.randint(1, 6)  # 🎲 real dice
         self.scores[user.id].append(value)
 
     def total(self, user):
         return sum(self.scores[user.id])
 
-    def both_done(self):
-        return all(self.finished.values())
 
+# ─────────────────────────
+# Buttons View
+# ─────────────────────────
 
 class DiceView(discord.ui.View):
     def __init__(self, game, ctx, rounds):
@@ -32,29 +37,50 @@ class DiceView(discord.ui.View):
         self.wins = {game.p1.id: 0, game.p2.id: 0}
 
     async def interaction_check(self, interaction: discord.Interaction):
-        return interaction.user == self.game.turn
+        if interaction.user != self.game.turn:
+            await interaction.response.send_message(
+                "⛔ It's not your turn!",
+                ephemeral=True
+            )
+            return False
+        return True
 
+    # 🎲 Roll Button
     @discord.ui.button(label="🎲 Roll", style=discord.ButtonStyle.green)
     async def roll_btn(self, interaction: discord.Interaction, button: discord.ui.Button):
         self.game.roll(interaction.user)
-        await interaction.response.send_message("🎲 Rolled!", ephemeral=True)
 
+        # 👀 everyone sees action, but NOT value
+        await interaction.response.send_message(
+            f"🎲 {interaction.user.mention} rolled!"
+        )
+
+    # ➡️ Pass Button
     @discord.ui.button(label="➡️ Pass", style=discord.ButtonStyle.blurple)
     async def pass_btn(self, interaction: discord.Interaction, button: discord.ui.Button):
-        self.game.finished[interaction.user.id] = True
+        user = interaction.user
+        self.game.finished[user.id] = True
 
-        # switch turn
-        if interaction.user == self.game.p1:
+        total = self.game.total(user)
+
+        # 📢 Reveal ONLY when passing
+        await interaction.response.send_message(
+            f"🛑 {user.mention} stops rolling!\n"
+            f"📊 Final Total: **{total}**"
+        )
+
+        # 🔄 Switch turn or end round
+        if user == self.game.p1:
             self.game.turn = self.game.p2
-            await interaction.response.send_message(
-                f"➡️ {self.game.p2.mention}'s turn!",
+
+            await self.ctx.send(
+                f"➡️ {self.game.p2.mention}, it's your turn!\nChoose wisely 👇",
                 view=self
             )
         else:
-            # round ends
-            await interaction.response.defer()
             await self.end_round()
 
+    # 🏁 End Round
     async def end_round(self):
         p1 = self.game.p1
         p2 = self.game.p2
@@ -66,45 +92,55 @@ class DiceView(discord.ui.View):
         diff1 = abs(t - s1)
         diff2 = abs(t - s2)
 
-        if diff1 < diff2:
-            winner = p1
-        elif diff2 < diff1:
-            winner = p2
-        else:
-            winner = None
-
         result_text = (
-            f"🎯 Target: **{t}**\n\n"
+            f"\n🎯 Target: **{t}**\n\n"
             f"{p1.mention} → {s1}\n"
             f"{p2.mention} → {s2}\n\n"
         )
 
-        if winner:
-            self.wins[winner.id] += 1
-            result_text += f"🏆 {winner.mention} wins the round!"
+        if diff1 < diff2:
+            self.wins[p1.id] += 1
+            result_text += f"🏆 {p1.mention} wins the round!"
+        elif diff2 < diff1:
+            self.wins[p2.id] += 1
+            result_text += f"🏆 {p2.mention} wins the round!"
         else:
             result_text += "🤝 It's a tie!"
 
+        # 📊 Scoreboard
+        result_text += (
+            f"\n\n📊 Score:\n"
+            f"{p1.mention}: {self.wins[p1.id]}\n"
+            f"{p2.mention}: {self.wins[p2.id]}"
+        )
+
         await self.ctx.send(result_text)
 
-        # check match win
+        # 🏆 Match winner check
         needed = self.rounds // 2 + 1
+
         if self.wins[p1.id] >= needed or self.wins[p2.id] >= needed:
             final_winner = p1 if self.wins[p1.id] > self.wins[p2.id] else p2
-            await self.ctx.send(f"👑 {final_winner.mention} wins the match!")
+
+            await self.ctx.send(f"\n👑 {final_winner.mention} wins the match!")
             self.stop()
             return
 
-        # new round
+        # 🔄 New round
         new_target = random.randint(1, 21)
         self.game = DiceGame(p1, p2, new_target)
 
         await self.ctx.send(
-            f"🔄 New Round!\n🎯 Target is **{new_target}**\n\n"
-            f"{p1.mention}, your turn!",
+            f"\n🔄 **New Round!**\n"
+            f"🎯 Target: **{new_target}**\n\n"
+            f"{p1.mention} goes first!\nChoose wisely 👇",
             view=self
         )
 
+
+# ─────────────────────────
+# Command
+# ─────────────────────────
 
 class Dice(commands.Cog):
     def __init__(self, bot):
@@ -113,11 +149,15 @@ class Dice(commands.Cog):
     @commands.command()
     async def dice(self, ctx, opponent: discord.Member, rounds: int):
         if rounds not in [1, 3, 5, 7]:
-            await ctx.send("❌ Choose rounds: 1, 3, 5, or 7")
+            await ctx.send("❌ Choose: 1, 3, 5, or 7")
             return
 
         if opponent.bot:
-            await ctx.send("❌ You can't play against a bot.")
+            await ctx.send("❌ Can't play against a bot.")
+            return
+
+        if opponent == ctx.author:
+            await ctx.send("❌ You can't play against yourself.")
             return
 
         target = random.randint(1, 21)
@@ -133,6 +173,10 @@ class Dice(commands.Cog):
             view=view
         )
 
+
+# ─────────────────────────
+# Setup
+# ─────────────────────────
 
 async def setup(bot):
     await bot.add_cog(Dice(bot))
