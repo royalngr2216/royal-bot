@@ -21,9 +21,6 @@ def keep_alive():
     t = Thread(target=run_web)
     t.start()
 
-# Start Flask server
-keep_alive()
-
 
 # ─────────────────────────
 # Discord Bot Setup
@@ -31,16 +28,15 @@ keep_alive()
 
 intents = discord.Intents.default()
 intents.message_content = True
-intents.members = True   # ✅ ADD THIS
+intents.members = True
 
 class MyBot(commands.Bot):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self.maintenance = False   # ✅ ADDED
-        self.owner_id = 1287545546231255092  # 🔴 PUT YOUR DISCORD ID HERE
+        self.maintenance = False
+        self.owner_id = 1287545546231255092
 
     async def setup_hook(self):
-        # Load all cogs safely
         if os.path.exists("./cogs"):
             for file in os.listdir("./cogs"):
                 if file.endswith(".py"):
@@ -56,7 +52,6 @@ bot = MyBot(
     help_command=None
 )
 
-# ✅ GLOBAL MAINTENANCE CHECK (THIS IS THE FIX)
 @bot.check
 async def global_check(ctx):
     if ctx.bot.maintenance and ctx.command.name not in ["online", "offline"]:
@@ -71,8 +66,7 @@ async def on_ready():
 
 @bot.event
 async def on_member_join(member):
-    role_id = 1478375120895475866  # replace this
-
+    role_id = 1478375120895475866
     role = member.guild.get_role(role_id)
 
     if role:
@@ -80,13 +74,16 @@ async def on_member_join(member):
 
 
 # ─────────────────────────
-# Start Bot
+# SAFE START (THIS FIXES YOUR ISSUE)
 # ─────────────────────────
 
-token = os.getenv("TOKEN")
+if __name__ == "__main__":
+    keep_alive()
 
-if not token:
-    print("❌ TOKEN NOT FOUND in environment variables.")
-else:
-    print("✅ TOKEN LOADED")
-    bot.run(token)
+    token = os.getenv("TOKEN")
+
+    if not token:
+        print("❌ TOKEN NOT FOUND in environment variables.")
+    else:
+        print("✅ TOKEN LOADED")
+        bot.run(token, reconnect=True)
