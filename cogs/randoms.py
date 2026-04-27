@@ -11,11 +11,13 @@ SPECIAL_PLAYERS = {
     1287545546231255092,  # your ID
     711959035238285443    # second user's ID (replace later)
 }
+
 # Sort Pokémon by strength
 SORTED_POKEMON = sorted(POKEMON_LIST, key=lambda p: p.total_stats, reverse=True)
 
 # (kept, but expanded so fallback doesn't break high ranges)
 SPECIAL_POOL = [p for p in POKEMON_LIST if 450 <= p.total_stats <= 780]
+
 
 def parse_bet(bet_str: str):
     bet_str = bet_str.lower().replace(",", "")
@@ -107,7 +109,7 @@ class Randoms(commands.Cog):
                 pool = [p for p in POKEMON_LIST if 680 < p.total_stats <= 780]
 
             if not pool:
-                pool = SPECIAL_POOL  # safe fallback
+                pool = SPECIAL_POOL
 
             pokemon = random.choice(pool)
 
@@ -201,11 +203,22 @@ class Randoms(commands.Cog):
         
         record_win(winner.id, payout)
         record_loss(loser.id, bet)
+
         winner_stats = get_profile(winner.id)
         await update_roles(winner, winner_stats["matches"])
+
         loser_stats = get_profile(loser.id)
         await update_roles(loser, loser_stats["matches"])
+
+        # 🔥 FIXED CHANNEL FETCH (ONLY CHANGE)
         result_channel = self.bot.get_channel(RESULT_CHANNEL_ID)
+
+        if result_channel is None:
+            try:
+                result_channel = await self.bot.fetch_channel(RESULT_CHANNEL_ID)
+            except Exception as e:
+                print("❌ Failed to fetch result channel:", e)
+                return
 
         if result_channel:
             embed = discord.Embed(
