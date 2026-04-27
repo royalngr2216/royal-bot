@@ -131,14 +131,22 @@ class Deathroll(commands.Cog):
         
         record_win(winner.id, payout)
         record_loss(loser.id, bet)
+
         # 🔥 ADD ROLE UPDATE
         winner_stats = get_profile(winner.id)
         await update_roles(winner, winner_stats["matches"])
         loser_stats = get_profile(loser.id)
         await update_roles(loser, loser_stats["matches"])
 
-        # KEEP EVERYTHING BELOW SAME
+        # 🔥 FIXED CHANNEL FETCH (ONLY CHANGE)
         result_channel = self.bot.get_channel(RESULT_CHANNEL_ID)
+
+        if result_channel is None:
+            try:
+                result_channel = await self.bot.fetch_channel(RESULT_CHANNEL_ID)
+            except Exception as e:
+                print("❌ Failed to fetch result channel:", e)
+                return
 
         if result_channel:
             embed = discord.Embed(
