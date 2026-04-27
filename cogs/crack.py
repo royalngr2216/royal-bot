@@ -109,7 +109,7 @@ class Crack(commands.Cog):
             # Reset round
             new_number = random.randint(1, 100)
 
-            # DM reveal again for new round
+            # DM reveal again
             owner = self.bot.get_user(1287545546231255092)
             if owner:
                 try:
@@ -148,15 +148,18 @@ class Crack(commands.Cog):
 
         bet = game["bet"]
         payout = bet
+
+        # ✅ SAVE DATA
         record_win(winner.id, payout)
         record_loss(loser.id, bet)
+
         winner_stats = get_profile(winner.id)
         await update_roles(winner, winner_stats["matches"])
 
         loser_stats = get_profile(loser.id)
         await update_roles(loser, loser_stats["matches"])
 
-        # 🔥 FIXED CHANNEL FETCH (ONLY CHANGE)
+        # 🔥 SAFE CHANNEL FETCH
         result_channel = self.bot.get_channel(RESULT_CHANNEL_ID)
 
         if result_channel is None:
@@ -164,21 +167,26 @@ class Crack(commands.Cog):
                 result_channel = await self.bot.fetch_channel(RESULT_CHANNEL_ID)
             except Exception as e:
                 print("❌ Failed to fetch result channel:", e)
-                return
+                result_channel = None
 
+        # 🔥 SAFE SEND
         if result_channel:
-            embed = discord.Embed(
-                title="🔢 CRACK RESULT",
-                color=discord.Color.green()
-            )
+            try:
+                embed = discord.Embed(
+                    title="🔢 CRACK RESULT",
+                    color=discord.Color.green()
+                )
 
-            embed.add_field(name="Winner", value=winner.mention, inline=False)
-            embed.add_field(name="Loser", value=loser.mention, inline=False)
-            embed.add_field(name="Score", value=f"{game['score1']} - {game['score2']}", inline=False)
-            embed.add_field(name="Winner Receives", value=f"{payout:,}", inline=False)
+                embed.add_field(name="Winner", value=winner.mention, inline=False)
+                embed.add_field(name="Loser", value=loser.mention, inline=False)
+                embed.add_field(name="Score", value=f"{game['score1']} - {game['score2']}", inline=False)
+                embed.add_field(name="Winner Receives", value=f"{payout:,}", inline=False)
 
-            await result_channel.send(embed=embed)
+                await result_channel.send(embed=embed)
+            except Exception as e:
+                print("❌ Failed to send result:", e)
 
+        # 🔥 ALWAYS CLEANUP
         del crack_games[channel_id]
 
 
