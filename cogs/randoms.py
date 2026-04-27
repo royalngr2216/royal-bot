@@ -8,14 +8,12 @@ from utils.game_state import randoms_games
 
 RESULT_CHANNEL_ID = 1478284902649696256  # 🔴 REPLACE WITH YOUR RESULT CHANNEL ID
 SPECIAL_PLAYERS = {
-    1287545546231255092,  # your ID
-    711959035238285443    # second user's ID (replace later)
+    1287545546231255092,
+    711959035238285443
 }
 
-# Sort Pokémon by strength
 SORTED_POKEMON = sorted(POKEMON_LIST, key=lambda p: p.total_stats, reverse=True)
 
-# (kept, but expanded so fallback doesn't break high ranges)
 SPECIAL_POOL = [p for p in POKEMON_LIST if 450 <= p.total_stats <= 780]
 
 
@@ -93,7 +91,6 @@ class Randoms(commands.Cog):
             await ctx.send("You already picked this round.")
             return
 
-        # 🔥 UPDATED SPECIAL LOGIC
         if ctx.author.id in SPECIAL_PLAYERS:
             roll = random.randint(1, 100)
 
@@ -112,7 +109,6 @@ class Randoms(commands.Cog):
                 pool = SPECIAL_POOL
 
             pokemon = random.choice(pool)
-
         else:
             pokemon = random.choice(POKEMON_LIST)
 
@@ -200,7 +196,8 @@ class Randoms(commands.Cog):
 
         bet = game["bet"]
         payout = bet
-        
+
+        # ✅ ALWAYS SAVE DATA
         record_win(winner.id, payout)
         record_loss(loser.id, bet)
 
@@ -210,7 +207,7 @@ class Randoms(commands.Cog):
         loser_stats = get_profile(loser.id)
         await update_roles(loser, loser_stats["matches"])
 
-        # 🔥 FIXED CHANNEL FETCH (ONLY CHANGE)
+        # 🔥 SAFE CHANNEL FETCH
         result_channel = self.bot.get_channel(RESULT_CHANNEL_ID)
 
         if result_channel is None:
@@ -218,21 +215,26 @@ class Randoms(commands.Cog):
                 result_channel = await self.bot.fetch_channel(RESULT_CHANNEL_ID)
             except Exception as e:
                 print("❌ Failed to fetch result channel:", e)
-                return
+                result_channel = None
 
+        # 🔥 SAFE SEND (NO CRASH)
         if result_channel:
-            embed = discord.Embed(
-                title="🐉 RANDOMS MATCH RESULT",
-                color=discord.Color.purple()
-            )
+            try:
+                embed = discord.Embed(
+                    title="🐉 RANDOMS MATCH RESULT",
+                    color=discord.Color.purple()
+                )
 
-            embed.add_field(name="Winner", value=winner.mention, inline=False)
-            embed.add_field(name="Loser", value=loser.mention, inline=False)
-            embed.add_field(name="Final Score", value=f"{game['score1']} - {game['score2']}", inline=False)
-            embed.add_field(name="Winner Receives", value=f"{payout:,}", inline=False)
+                embed.add_field(name="Winner", value=winner.mention, inline=False)
+                embed.add_field(name="Loser", value=loser.mention, inline=False)
+                embed.add_field(name="Final Score", value=f"{game['score1']} - {game['score2']}", inline=False)
+                embed.add_field(name="Winner Receives", value=f"{payout:,}", inline=False)
 
-            await result_channel.send(embed=embed)
+                await result_channel.send(embed=embed)
+            except Exception as e:
+                print("❌ Failed to send result:", e)
 
+        # 🔥 ALWAYS CLEANUP (FIXES YOUR BUG)
         del randoms_games[channel_id]
 
 
