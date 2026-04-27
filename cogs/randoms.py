@@ -94,12 +94,12 @@ class Randoms(commands.Cog):
         if ctx.author.id in SPECIAL_PLAYERS:
             roll = random.randint(1, 100)
 
-            if roll <= 25:
+            if roll <= 20:
                 pool = [p for p in POKEMON_LIST if 450 <= p.total_stats <= 500]
-            elif roll <= 42:
+            elif roll <= 35:
                 pool = [p for p in POKEMON_LIST if 500 < p.total_stats <= 530]
-            elif roll <= 72:
-                pool = [p for p in POKEMON_LIST if 530 < p.total_stats <= 570]
+            elif roll <= 80:
+                pool = [p for p in POKEMON_LIST if 530 < p.total_stats <= 580]
             elif roll <= 92:
                 pool = [p for p in POKEMON_LIST if 570 < p.total_stats <= 680]
             else:
