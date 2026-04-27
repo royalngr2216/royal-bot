@@ -97,12 +97,12 @@ class Randoms(commands.Cog):
 
             if roll <= 25:
                 pool = [p for p in POKEMON_LIST if 450 <= p.total_stats <= 500]
-            elif roll <= 35:
+            elif roll <= 42:
                 pool = [p for p in POKEMON_LIST if 500 < p.total_stats <= 530]
-            elif roll <= 70:
-                pool = [p for p in POKEMON_LIST if 530 < p.total_stats <= 600]
-            elif roll <= 90:
-                pool = [p for p in POKEMON_LIST if 600 < p.total_stats <= 680]
+            elif roll <= 72:
+                pool = [p for p in POKEMON_LIST if 530 < p.total_stats <= 570]
+            elif roll <= 92:
+                pool = [p for p in POKEMON_LIST if 570 < p.total_stats <= 680]
             else:
                 pool = [p for p in POKEMON_LIST if 680 < p.total_stats <= 780]
 
