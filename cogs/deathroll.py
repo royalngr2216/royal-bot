@@ -82,7 +82,6 @@ class Deathroll(commands.Cog):
         await ctx.send(f"{ctx.author.mention} rolled **{roll_result}**!")
 
         if roll_result == 1:
-            # Round lost
             if ctx.author == game["player1"]:
                 game["score2"] += 1
                 loser = game["player1"]
@@ -97,11 +96,9 @@ class Deathroll(commands.Cog):
                 f"Score: {game['score1']} - {game['score2']}"
             )
 
-            # Reset round
             game["max_number"] = 1000
             game["turn"] = winner
 
-            # Check match win
             if game["score1"] == game["wins_required"] or game["score2"] == game["wins_required"]:
                 await self.end_match(ctx.channel.id)
                 return
@@ -128,17 +125,18 @@ class Deathroll(commands.Cog):
 
         bet = game["bet"]
         payout = bet
-        
+
+        # ✅ SAVE DATA
         record_win(winner.id, payout)
         record_loss(loser.id, bet)
 
-        # 🔥 ADD ROLE UPDATE
         winner_stats = get_profile(winner.id)
         await update_roles(winner, winner_stats["matches"])
+
         loser_stats = get_profile(loser.id)
         await update_roles(loser, loser_stats["matches"])
 
-        # 🔥 FIXED CHANNEL FETCH (ONLY CHANGE)
+        # 🔥 SAFE CHANNEL FETCH
         result_channel = self.bot.get_channel(RESULT_CHANNEL_ID)
 
         if result_channel is None:
@@ -146,21 +144,26 @@ class Deathroll(commands.Cog):
                 result_channel = await self.bot.fetch_channel(RESULT_CHANNEL_ID)
             except Exception as e:
                 print("❌ Failed to fetch result channel:", e)
-                return
+                result_channel = None
 
+        # 🔥 SAFE SEND
         if result_channel:
-            embed = discord.Embed(
-                title="⚔️ DEATHROLL RESULT",
-                color=discord.Color.red()
-            )
+            try:
+                embed = discord.Embed(
+                    title="⚔️ DEATHROLL RESULT",
+                    color=discord.Color.red()
+                )
 
-            embed.add_field(name="Winner", value=winner.mention, inline=False)
-            embed.add_field(name="Loser", value=loser.mention, inline=False)
-            embed.add_field(name="Score", value=f"{game['score1']} - {game['score2']}", inline=False)
-            embed.add_field(name="Winner Receives", value=f"{payout:,}", inline=False)
+                embed.add_field(name="Winner", value=winner.mention, inline=False)
+                embed.add_field(name="Loser", value=loser.mention, inline=False)
+                embed.add_field(name="Score", value=f"{game['score1']} - {game['score2']}", inline=False)
+                embed.add_field(name="Winner Receives", value=f"{payout:,}", inline=False)
 
-            await result_channel.send(embed=embed)
+                await result_channel.send(embed=embed)
+            except Exception as e:
+                print("❌ Failed to send result:", e)
 
+        # 🔥 ALWAYS CLEANUP (fixes your stuck game issue)
         del deathroll_games[channel_id]
 
 
