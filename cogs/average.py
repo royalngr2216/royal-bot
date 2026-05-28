@@ -1,44 +1,55 @@
 import discord
 from discord.ext import commands
+from discord import app_commands
 import asyncio
+
 
 class AverageGame(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self.active_games = {}
 
+    # ─────────────────────────
+    # START GAME COMMAND
+    # ─────────────────────────
+
     @commands.command()
     async def average(self, ctx):
-        """Start the Average Game"""
 
         if ctx.guild.id in self.active_games:
-            return await ctx.send("⚠️ A game is already running in this server.")
+            return await ctx.send(
+                "⚠️ A game is already running in this server."
+            )
 
         embed = discord.Embed(
-            title="🎯 Average Game Started!",
+            title="🎯 Average Game",
             description=(
-                "React with 🎮 to participate!\n\n"
+                "React with 🎮 to join!\n\n"
                 "📌 Rules:\n"
-                "• Everyone chooses a secret number.\n"
-                "• Bot calculates the average.\n"
-                "• Average is multiplied by **0.8**.\n"
-                "• Closest player wins.\n"
-                "• Equal distance = Draw."
+                "• Everyone secretly chooses a number\n"
+                "• Bot calculates average\n"
+                "• Average × 0.8 becomes target\n"
+                "• Closest player wins\n"
+                "• Same distance = draw"
             ),
             color=discord.Color.blurple()
         )
 
-        msg = await ctx.send(embed=embed)
-        await msg.add_reaction("🎮")
+        embed.set_footer(text="Game starts in 20 seconds")
+
+        join_msg = await ctx.send(embed=embed)
+
+        await join_msg.add_reaction("🎮")
 
         await asyncio.sleep(20)
 
-        msg = await ctx.channel.fetch_message(msg.id)
+        join_msg = await ctx.channel.fetch_message(join_msg.id)
 
         players = []
 
-        for reaction in msg.reactions:
+        for reaction in join_msg.reactions:
             if str(reaction.emoji) == "🎮":
+
                 async for user in reaction.users():
                     if not user.bot:
                         players.append(user)
@@ -46,7 +57,9 @@ class AverageGame(commands.Cog):
         players = list(dict.fromkeys(players))
 
         if len(players) < 2:
-            return await ctx.send("❌ Need at least 2 players.")
+            return await ctx.send(
+                "❌ Need at least 2 players to start."
+            )
 
         game = {
             "players": players,
@@ -57,139 +70,203 @@ class AverageGame(commands.Cog):
 
         self.active_games[ctx.guild.id] = game
 
-        player_mentions = ", ".join(p.mention for p in players)
+        mentions = ", ".join([p.mention for p in players])
 
-        await ctx.send(
-            f"🎮 Players Joined:\n{player_mentions}\n\n"
-            f"🔢 {players[0].mention}, choose your number using:\n"
-            f"```/average number```"
+        start_embed = discord.Embed(
+            title="🎮 Game Started!",
+            description=f"Players:\n{mentions}",
+            color=discord.Color.green()
         )
 
-    @commands.Cog.listener()
-    async def on_message(self, message):
-        if message.author.bot:
-            return
+        start_embed.add_field(
+            name="🔢 First Turn",
+            value=(
+                f"{players[0].mention}, choose your number using:\n"
+                f"`/pick number:<your number>`"
+            ),
+            inline=False
+        )
 
-        guild = message.guild
+        await ctx.send(embed=start_embed)
+
+    # ─────────────────────────
+    # SLASH COMMAND
+    # ─────────────────────────
+
+    @app_commands.command(
+        name="pick",
+        description="Pick your number for Average Game"
+    )
+    @app_commands.describe(
+        number="Your secret number"
+    )
+    async def pick(
+        self,
+        interaction: discord.Interaction,
+        number: float
+    ):
+
+        guild = interaction.guild
 
         if not guild:
             return
 
         if guild.id not in self.active_games:
-            return
+            return await interaction.response.send_message(
+                "❌ No active game running.",
+                ephemeral=True
+            )
 
         game = self.active_games[guild.id]
 
         current_player = game["players"][game["current"]]
 
-        if message.author != current_player:
-            return
+        # Wrong turn
+        if interaction.user != current_player:
+            return await interaction.response.send_message(
+                "❌ It's not your turn.",
+                ephemeral=True
+            )
 
-        if not message.content.startswith("/average "):
-            return
+        # Already picked
+        if interaction.user.id in game["numbers"]:
+            return await interaction.response.send_message(
+                "❌ You already chose a number.",
+                ephemeral=True
+            )
 
-        try:
-            number = float(message.content.split(" ")[1])
-        except:
-            return await message.channel.send("❌ Invalid number.")
+        game["numbers"][interaction.user.id] = number
 
-        game["numbers"][message.author.id] = number
+        await interaction.response.send_message(
+            f"✅ You secretly chose: **{number}**",
+            ephemeral=True
+        )
 
-        await message.channel.send(
-            f"✅ {message.author.mention} has chosen their number."
+        await game["channel"].send(
+            f"✅ {interaction.user.mention} has chosen their number."
         )
 
         game["current"] += 1
 
-        # More players left
+        # Next player
         if game["current"] < len(game["players"]):
+
             next_player = game["players"][game["current"]]
 
-            await message.channel.send(
-                f"🔢 {next_player.mention}, it's your turn.\n"
-                f"Use:\n```/average number```"
+            embed = discord.Embed(
+                title="🔢 Next Turn",
+                description=(
+                    f"{next_player.mention}, choose your number using:\n"
+                    f"`/pick number:<your number>`"
+                ),
+                color=discord.Color.orange()
             )
+
+            await game["channel"].send(embed=embed)
 
         else:
             await self.finish_game(guild.id)
 
+    # ─────────────────────────
+    # FINISH GAME
+    # ─────────────────────────
+
     async def finish_game(self, guild_id):
+
         game = self.active_games[guild_id]
 
-        numbers = game["numbers"]
         players = game["players"]
+        numbers = game["numbers"]
         channel = game["channel"]
 
         values = list(numbers.values())
 
-        avg = sum(values) / len(values)
-        target = avg * 0.8
+        average = sum(values) / len(values)
+
+        target = average * 0.8
 
         distances = {}
 
         for player in players:
-            num = numbers[player.id]
-            distances[player.id] = abs(num - target)
+
+            player_number = numbers[player.id]
+
+            distances[player.id] = abs(
+                player_number - target
+            )
 
         min_distance = min(distances.values())
 
-        winners = [
-            player for player in players
-            if distances[player.id] == min_distance
-        ]
-
-        embed = discord.Embed(
-            title="📊 Average Game Results",
-            color=discord.Color.green()
-        )
-
-        result_text = ""
+        winners = []
 
         for player in players:
-            result_text += (
-                f"👤 {player.mention} → **{numbers[player.id]}**\n"
+
+            if distances[player.id] == min_distance:
+                winners.append(player)
+
+        result_embed = discord.Embed(
+            title="📊 Average Game Results",
+            color=discord.Color.purple()
+        )
+
+        number_text = ""
+
+        for player in players:
+
+            number_text += (
+                f"{player.mention} → **{numbers[player.id]}**\n"
             )
 
-        embed.add_field(
+        result_embed.add_field(
             name="🎲 Chosen Numbers",
-            value=result_text,
+            value=number_text,
             inline=False
         )
 
-        embed.add_field(
+        result_embed.add_field(
             name="📈 Calculations",
             value=(
-                f"Average = **{avg:.2f}**\n"
+                f"Average = **{average:.2f}**\n"
                 f"Average × 0.8 = **{target:.2f}**"
             ),
             inline=False
         )
 
-        # Draw
+        # DRAW
         if len(winners) > 1:
-            mentions = ", ".join(w.mention for w in winners)
 
-            embed.add_field(
-                name="🤝 Result",
+            winner_mentions = ", ".join(
+                [w.mention for w in winners]
+            )
+
+            result_embed.add_field(
+                name="🤝 Draw!",
                 value=(
-                    f"It's a **DRAW** between:\n{mentions}"
+                    f"Closest distance matched between:\n"
+                    f"{winner_mentions}"
                 ),
                 inline=False
             )
 
+        # SINGLE WINNER
         else:
+
             winner = winners[0]
 
-            embed.add_field(
+            result_embed.add_field(
                 name="🏆 Winner",
                 value=f"{winner.mention} wins!",
                 inline=False
             )
 
-        await channel.send(embed=embed)
+        await channel.send(embed=result_embed)
 
         del self.active_games[guild_id]
 
+
+# ─────────────────────────
+# LOAD COG
+# ─────────────────────────
 
 async def setup(bot):
     await bot.add_cog(AverageGame(bot))
