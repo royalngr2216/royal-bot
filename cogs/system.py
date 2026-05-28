@@ -20,6 +20,7 @@ from utils.game_state import (
 # ─────────────────────────
 
 ROLE_REWARDS = {
+
     5: 1478375252290699386,
     20: 1478370330455048192,
     50: 1478380593577332736,
@@ -38,6 +39,7 @@ ROLE_REWARDS = {
 def get_rank_name(matches):
 
     ranks = [
+
         (500, "👑 Royal"),
         (400, "💎 Casino King"),
         (300, "🔥 Elite"),
@@ -58,6 +60,7 @@ def get_rank_name(matches):
 def get_rank_progress(matches):
 
     ranks = [
+
         (0, "Member"),
         (5, "Rookie"),
         (20, "Grinder"),
@@ -120,7 +123,7 @@ def get_rank_progress(matches):
 
 
 # ─────────────────────────
-# UPDATE ROLES
+# ROLE UPDATE
 # ─────────────────────────
 
 async def update_roles(member, matches):
@@ -154,13 +157,15 @@ async def update_roles(member, matches):
 
         if role and role in member.roles:
 
-            await member.remove_roles(role)
+            await member.remove_roles(
+                role
+            )
 
     await member.add_roles(new_role)
 
 
 # ─────────────────────────
-# HELP BUTTON VIEW
+# HELP VIEW
 # ─────────────────────────
 
 class HelpView(discord.ui.View):
@@ -218,36 +223,28 @@ class HelpView(discord.ui.View):
 class System(commands.Cog):
 
     def __init__(self, bot):
+
         self.bot = bot
 
     # ─────────────────────────
-    # HELP COMMAND
+    # HELP
     # ─────────────────────────
 
     @commands.command(name="help")
     async def help_prefix(self, ctx):
 
-        # PAGE 1
-
         embed1 = discord.Embed(
             title="🎮 ROYAL ARENA",
-            description=(
-                "**Game Commands**\n"
-                "━━━━━━━━━━━━━━━━━━━━━━"
-            ),
-            color=discord.Color.from_rgb(
-                0,
-                200,
-                255
-            )
+            description="Game Commands",
+            color=discord.Color.blurple()
         )
 
         embed1.add_field(
             name="🐉 RANDOMS",
             value=(
-                "**Command:** `.randoms @user 1/3/5/7/9`\n"
-                "**Action:** `.pick`\n"
-                "**Goal:** Highest Pokémon power wins"
+                "```yaml\n"
+                ".randoms @user 1/3/5/7/9\n"
+                "```"
             ),
             inline=False
         )
@@ -255,9 +252,9 @@ class System(commands.Cog):
         embed1.add_field(
             name="💀 DEATHROLL",
             value=(
-                "**Command:** `.deathroll @user 1/3/5/7/9`\n"
-                "**Action:** Roll button\n"
-                "**Goal:** Avoid rolling 1"
+                "```yaml\n"
+                ".deathroll @user 1/3/5/7/9\n"
+                "```"
             ),
             inline=False
         )
@@ -265,9 +262,9 @@ class System(commands.Cog):
         embed1.add_field(
             name="🎯 CRACK",
             value=(
-                "**Command:** `.crack @user 1/3/5/7/9`\n"
-                "**Action:** `.guess number`\n"
-                "**Goal:** Find hidden number"
+                "```yaml\n"
+                ".crack @user 1/3/5/7/9\n"
+                "```"
             ),
             inline=False
         )
@@ -275,9 +272,9 @@ class System(commands.Cog):
         embed1.add_field(
             name="🎰 JACKPOT",
             value=(
-                "**Command:** `.jackpot`\n"
-                "**Join:** React 🎰\n"
-                "**Goal:** Last player survives"
+                "```yaml\n"
+                ".jackpot\n"
+                "```"
             ),
             inline=False
         )
@@ -285,9 +282,9 @@ class System(commands.Cog):
         embed1.add_field(
             name="📊 AVERAGE",
             value=(
-                "**Command:** `.average`\n"
-                "**Goal:** Closest to target wins\n"
-                "**Twist:** Duplicate numbers lose"
+                "```yaml\n"
+                ".average\n"
+                "```"
             ),
             inline=False
         )
@@ -300,18 +297,17 @@ class System(commands.Cog):
 
         embed2 = discord.Embed(
             title="⚙️ SYSTEM",
-            description=(
-                "**Utility Commands**\n"
-                "━━━━━━━━━━━━━━━━━━━━━━"
-            ),
+            description="Utility Commands",
             color=discord.Color.orange()
         )
 
         embed2.add_field(
             name="🛑 STOP",
             value=(
-                "**Command:** `.stop`\n"
-                "Stops current game"
+                "```yaml\n"
+                ".stop\n"
+                "Stops active game\n"
+                "```"
             ),
             inline=False
         )
@@ -319,8 +315,9 @@ class System(commands.Cog):
         embed2.add_field(
             name="🎖️ PROFILE",
             value=(
-                "**Command:** `.profile`\n"
-                "Shows player stats"
+                "```yaml\n"
+                ".profile @user\n"
+                "```"
             ),
             inline=False
         )
@@ -328,17 +325,9 @@ class System(commands.Cog):
         embed2.add_field(
             name="🏆 LEADERBOARD",
             value=(
-                "**Command:** `.leaderboard`\n"
-                "Shows top players"
-            ),
-            inline=False
-        )
-
-        embed2.add_field(
-            name="📡 PING",
-            value=(
-                "**Command:** `.ping`\n"
-                "Shows bot latency"
+                "```yaml\n"
+                ".leaderboard\n"
+                "```"
             ),
             inline=False
         )
@@ -368,6 +357,7 @@ class System(commands.Cog):
         stopped = False
 
         for game_dict in [
+
             crack_games,
             randoms_games,
             jackpot_games,
@@ -382,11 +372,18 @@ class System(commands.Cog):
 
                 stopped = True
 
-        await ctx.send(
-            "🛑 Game stopped."
-            if stopped
-            else "No active game."
+        embed = discord.Embed(
+
+            description=(
+                "🛑 Game stopped."
+                if stopped
+                else "No active game."
+            ),
+
+            color=discord.Color.red()
         )
+
+        await ctx.send(embed=embed)
 
     # ─────────────────────────
     # PROFILE
@@ -419,7 +416,8 @@ class System(commands.Cog):
         )
 
         embed = discord.Embed(
-            title=f"🎖️ {member.display_name}",
+            title="🎖️ PLAYER PROFILE",
+            description=member.display_name,
             color=discord.Color.gold()
         )
 
@@ -429,42 +427,51 @@ class System(commands.Cog):
 
         embed.add_field(
             name="🏅 Rank",
-            value=f"**{rank}**",
+            value=rank,
             inline=True
         )
 
         embed.add_field(
             name="🎮 Matches",
-            value=f"**{stats['matches']}**",
+            value=stats["matches"],
             inline=True
         )
 
         embed.add_field(
-            name="📊 Winrate",
-            value=f"**{stats['winrate']}%**",
+            name="💀 Losses",
+            value=stats["losses"],
+            inline=True
+        )
+
+        embed.add_field(
+            name="📊 Progress",
+            value=(
+                f"{bar} {percent}%\n"
+                f"Next: {next_rank}\n"
+                f"Need: {remaining}"
+            ),
+            inline=False
+        )
+
+        embed.add_field(
+            name="📈 Winrate",
+            value=f"{stats['winrate']}%",
             inline=True
         )
 
         embed.add_field(
             name="🔥 Streak",
-            value=f"**{stats.get('streak', 0)}**",
+            value=stats.get("streak", 0),
             inline=True
         )
 
         embed.add_field(
-            name="👑 Best Streak",
-            value=f"**{stats.get('best_streak', 0)}**",
-            inline=True
-        )
-
-        embed.add_field(
-            name="📈 Progress",
-            value=(
-                f"**{bar} {percent}%**\n"
-                f"Next: **{next_rank}**\n"
-                f"Need: **{remaining}** matches"
+            name="🏆 Best",
+            value=stats.get(
+                "best_streak",
+                0
             ),
-            inline=False
+            inline=True
         )
 
         await ctx.send(embed=embed)
@@ -505,31 +512,11 @@ class System(commands.Cog):
 
             desc += (
                 f"{rank} <@{uid}>\n"
-                f"🎮 **{matches}** matches\n"
-                f"📊 **{winrate}%** WR\n\n"
+                f"🎮 Matches: {matches}\n"
+                f"📈 Winrate: {winrate}%\n\n"
             )
 
         embed.description = desc
-
-        await ctx.send(embed=embed)
-
-    # ─────────────────────────
-    # PING
-    # ─────────────────────────
-
-    @commands.command(name="ping")
-    async def ping(self, ctx):
-
-        latency = round(
-            self.bot.latency * 1000
-        )
-
-        embed = discord.Embed(
-            description=(
-                f"📡 **{latency}ms**"
-            ),
-            color=discord.Color.green()
-        )
 
         await ctx.send(embed=embed)
 
