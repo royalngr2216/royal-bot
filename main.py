@@ -1,197 +1,262 @@
 import discord
 from discord.ext import commands
-from flask import Flask
-from threading import Thread
-import os
+import asyncio
 
-# ─────────────────────────
-# Flask Web Server
-# ─────────────────────────
-
-app = Flask(__name__)
-
-@app.route("/")
-def home():
-    return "Bot is alive!"
+# Safety import fallback
+try:
+    from utils.game_state import average_games
+except ImportError:
+    average_games = {}
 
 
-def run_web():
-    port = int(os.environ.get("PORT", 10000))
-    print(f"🌐 Flask running on port {port}")
-
-    app.run(
-        host="0.0.0.0",
-        port=port
+# ─────────────────────────────────────────────────────────
+# UI MODAL: NUMBER INPUT
+# ─────────────────────────────────────────────────────────
+class PickNumberModal(discord.ui.Modal, title="🎯 Lock Your Guess"):
+    
+    number_input = discord.ui.TextInput(
+        label="Choose a number (0 - 1000)",
+        placeholder="Enter your strategic guess here...",
+        min_length=1,
+        max_length=4,
+        required=True
     )
 
+    def __init__(self, game_cog, guild_id):
+        super().__init__()
+        self.game_cog = game_cog
+        self.guild_id = guild_id
 
-def keep_alive():
-    t = Thread(target=run_web)
-    t.start()
+    async def on_submit(self, interaction: discord.Interaction):
+        if self.guild_id not in self.game_cog.active_games:
+            return await interaction.response.send_message("❌ This game has already ended.", ephemeral=True)
+
+        game = self.game_cog.active_games[self.guild_id]
+
+        if interaction.user not in game["players"]:
+            return await interaction.response.send_message("❌ You aren't signed up for this match!", ephemeral=True)
+
+        try:
+            val = int(self.number_input.value)
+        except ValueError:
+            return await interaction.response.send_message("❌ Please enter a valid integer.", ephemeral=True)
+
+        if val < 0 or val > 1000:
+            return await interaction.response.send_message("❌ Your number must be between 0 and 1000.", ephemeral=True)
+
+        game["numbers"][interaction.user.id] = val
+        await interaction.response.send_message(f"🔒 Locked in: **{val}**", ephemeral=True)
+
+        await self.game_cog.update_submission_board(self.guild_id)
 
 
-# ─────────────────────────
-# Discord Intents
-# ─────────────────────────
+# ─────────────────────────────────────────────────────────
+# UI VIEW: ACTIVE INPUT BUTTON
+# ─────────────────────────────────────────────────────────
+class GameControlView(discord.ui.View):
+    
+    def __init__(self, game_cog, guild_id):
+        super().__init__(timeout=None)
+        self.game_cog = game_cog
+        self.guild_id = guild_id
 
-intents = discord.Intents.default()
+    @discord.ui.button(label="Submit Number", style=discord.ButtonStyle.primary, emoji="🎲")
+    async def submit_btn(self, interaction: discord.Interaction, button: discord.ui.Button):
+        modal = PickNumberModal(self.game_cog, self.guild_id)
+        await interaction.response.send_modal(modal)
 
-intents.message_content = True
-intents.members = True
 
-
-# ─────────────────────────
-# Custom Bot Class
-# ─────────────────────────
-
-class MyBot(commands.Bot):
-
+# ─────────────────────────────────────────────────────────
+# UI VIEW: LOBBY SIGN-UP BUTTON
+# ─────────────────────────────────────────────────────────
+class LobbyView(discord.ui.View):
+    
     def __init__(self):
+        super().__init__(timeout=20.0)
+        self.players = []
 
-        super().__init__(
-            command_prefix=".",
-            intents=intents,
-            help_command=None
+    @discord.ui.button(label="Join Arena", style=discord.ButtonStyle.success, emoji="🎮")
+    async def join(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if interaction.user in self.players:
+            return await interaction.response.send_message("You are already in the queue!", ephemeral=True)
+        
+        self.players.append(interaction.user)
+        await interaction.response.send_message("⚔️ Joined the game!", ephemeral=True)
+
+
+# ─────────────────────────────────────────────────────────
+# MAIN COG
+# ─────────────────────────────────────────────────────────
+class AverageGame(commands.Cog):
+
+    def __init__(self, bot):
+        self.bot = bot
+        self.active_games = average_games
+
+    @commands.command(name="average")
+    async def average(self, ctx: commands.Context):
+        guild = ctx.guild
+        if not guild:
+            return
+
+        if guild.id in self.active_games:
+            return await ctx.send("❌ An Average game is already running here.")
+
+        lobby_embed = discord.Embed(
+            title="🎯 Average Arena",
+            description="Press the button below to join the match.\n\n🏆 Goal: **Closest to [Average × 0.8] wins.**",
+            color=0x5865F2
+        )
+        lobby_embed.add_field(
+            name="📌 Rules",
+            value="• Submit a number from **0 to 1000** via popup modal\n• All inputs are hidden until judgment\n• Simultaneous turns: no more waiting around!",
+            inline=False
+        )
+        lobby_embed.set_footer(text="Lobby closing in 20 seconds...")
+
+        view = LobbyView()
+        lobby_msg = await ctx.send(embed=lobby_embed, view=view)
+
+        await view.wait()
+
+        players = list(dict.fromkeys(view.players))
+
+        if len(players) < 2:
+            try:
+                await lobby_msg.edit(view=None)
+            except discord.HTTPException:
+                pass
+            return await ctx.send("❌ Game cancelled: Need at least 2 players to start.")
+
+        game = {
+            "players": players,
+            "numbers": {},
+            "channel": ctx.channel,
+            "board_msg": None
+        }
+        self.active_games[guild.id] = game
+
+        start_embed = discord.Embed(
+            title="🏁 Match Commenced!",
+            description="Click **Submit Number** below to securely pass your number.",
+            color=0x57F287
+        )
+        
+        player_status = "\n".join([f"⏳ {p.mention} — *Thinking...*" for p in players])
+        start_embed.add_field(name="📋 Roster Status", value=player_status, inline=False)
+
+        control_view = GameControlView(self, guild.id)
+        board_msg = await ctx.send(embed=start_embed, view=control_view)
+        
+        game["board_msg"] = board_msg
+
+    async def update_submission_board(self, guild_id):
+        game = self.active_games.get(guild_id)
+        if not game or not game["board_msg"]:
+            return
+
+        players = game["players"]
+        numbers = game["numbers"]
+
+        status_lines = []
+        for p in players:
+            if p.id in numbers:
+                status_lines.append(f"✅ {p.mention} — **Locked In**")
+            else:
+                status_lines.append(f"⏳ {p.mention} — *Thinking...*")
+
+        status_text = "\n".join(status_lines)
+
+        updated_embed = discord.Embed(
+            title="🏁 Match Active",
+            description="Click **Submit Number** below to securely pass your number.",
+            color=0xFAA61A
+        )
+        updated_embed.add_field(name="📋 Roster Status", value=status_text, inline=False)
+        
+        try:
+            await game["board_msg"].edit(embed=updated_embed)
+        except discord.HTTPException:
+            pass
+
+        if len(numbers) == len(players):
+            await asyncio.sleep(1.5)
+            await self.finish_game(guild_id)
+
+    async def finish_game(self, guild_id):
+        game = self.active_games.get(guild_id)
+        if not game:
+            return
+
+        players = game["players"]
+        numbers = game["numbers"]
+        board_msg = game["board_msg"]
+
+        if board_msg:
+            try:
+                await board_msg.edit(view=None)
+            except discord.HTTPException:
+                pass
+
+        # If everyone left or didn't submit numbers
+        if not numbers:
+            try:
+                await game["channel"].send("❌ No numbers were submitted. Game ended.")
+            except discord.HTTPException:
+                pass
+            if guild_id in self.active_games:
+                del self.active_games[guild_id]
+            return
+
+        values = list(numbers.values())
+        average = sum(values) / len(values)
+        target = average * 0.8
+
+        # Only evaluate players who actually gave answers
+        active_players = [p for p in players if p.id in numbers]
+        distances = {p.id: abs(numbers[p.id] - target) for p in active_players}
+        closest = min(distances.values())
+
+        winners = [p for p in active_players if distances[p.id] == closest]
+
+        reveal = "\n".join([f"> {p.mention} → `{numbers[p.id]}`" for p in active_players])
+
+        results_embed = discord.Embed(
+            title="📊 Game Results Summary",
+            color=0xEB459E
+        )
+        results_embed.add_field(name="🎲 Revealing Choices", value=reveal, inline=False)
+        results_embed.add_field(
+            name="🧮 Calculations Summary",
+            value=f"> Average Selection: `{average:.2f}`\n> Target Vector ($Average \\times 0.8$): `{target:.2f}`",
+            inline=False
         )
 
-        self.maintenance = False
-        self.owner_id = 1287545546231255092
-
-    async def setup_hook(self):
-
-        print("⚙️ Loading cogs...")
-
-        if os.path.exists("./cogs"):
-
-            for file in os.listdir("./cogs"):
-
-                if file.endswith(".py"):
-
-                    try:
-                        await self.load_extension(
-                            f"cogs.{file[:-3]}"
-                        )
-
-                        print(f"✅ Loaded cog: {file}")
-
-                    except Exception as e:
-
-                        print(
-                            f"❌ Failed to load {file}: {e}"
-                        )
-
+        if len(winners) > 1:
+            draw_mentions = " ".join([w.mention for w in winners])
+            results_embed.add_field(
+                name="🤝 Draw Verdict",
+                value=f"{draw_mentions}\nEqually closest distance to target!",
+                inline=False
+            )
         else:
-            print("⚠️ No cogs folder found")
+            results_embed.add_field(
+                name="🏆 Apex Victor",
+                value=f"{winners[0].mention}\nAbsolute closest choice to target `{target:.2f}`!",
+                inline=False
+            )
 
-
-# ─────────────────────────
-# Bot Instance
-# ─────────────────────────
-
-bot = MyBot()
-
-
-# ─────────────────────────
-# Global Check
-# ─────────────────────────
-
-@bot.check
-async def global_check(ctx):
-
-    if (
-        bot.maintenance
-        and ctx.command.name not in ["online", "offline"]
-    ):
-
-        await ctx.send(
-            "🛠️ Bot is currently under maintenance."
-        )
-
-        return False
-
-    return True
-
-
-# ─────────────────────────
-# Events
-# ─────────────────────────
-
-@bot.event
-async def on_ready():
-
-    try:
-
-        synced = await bot.tree.sync()
-
-        print(
-            f"🌍 Synced {len(synced)} slash commands"
-        )
-
-    except Exception as e:
-
-        print(f"❌ Slash sync error: {e}")
-
-    print(f"🚀 Logged in as {bot.user}")
-
-
-@bot.event
-async def on_member_join(member):
-
-    role_id = 1478375120895475866
-
-    role = member.guild.get_role(role_id)
-
-    if role:
-
+        results_embed.set_footer(text="Average Arena Engine")
+        
         try:
+            await game["channel"].send(embed=results_embed)
+        except discord.HTTPException:
+            pass
 
-            await member.add_roles(role)
-
-            print(
-                f"✅ Gave role to {member.name}"
-            )
-
-        except Exception as e:
-
-            print(
-                f"❌ Failed to give role: {e}"
-            )
-
-    else:
-
-        print("⚠️ Role not found")
+        if guild_id in self.active_games:
+            del self.active_games[guild_id]
 
 
-# ─────────────────────────
-# Main Start
-# ─────────────────────────
-
-if __name__ == "__main__":
-
-    print("🔁 Starting bot...")
-
-    keep_alive()
-
-    token = os.getenv("TOKEN")
-
-    print(
-        f"🔑 TOKEN LOADED: {token is not None}"
-    )
-
-    if not token:
-
-        print(
-            "❌ TOKEN NOT FOUND."
-        )
-
-    else:
-
-        try:
-
-            bot.run(token)
-
-        except Exception as e:
-
-            print(
-                f"❌ Error while starting bot: {e}"
-            )
+async def setup(bot):
+    await bot.add_cog(AverageGame(bot))
+        
