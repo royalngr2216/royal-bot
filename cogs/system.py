@@ -160,7 +160,7 @@ async def update_roles(member, matches):
 
 
 # ─────────────────────────
-# HELP VIEW
+# HELP BUTTON VIEW
 # ─────────────────────────
 
 class HelpView(discord.ui.View):
@@ -221,7 +221,7 @@ class System(commands.Cog):
         self.bot = bot
 
     # ─────────────────────────
-    # HELP
+    # HELP COMMAND
     # ─────────────────────────
 
     @commands.command(name="help")
@@ -245,9 +245,9 @@ class System(commands.Cog):
         embed1.add_field(
             name="🐉 RANDOMS",
             value=(
-                "**Command:** `.randoms @user 1/3/5`\n"
+                "**Command:** `.randoms @user 1/3/5/7/9`\n"
                 "**Action:** `.pick`\n"
-                "**Goal:** Strongest Pokémon wins"
+                "**Goal:** Highest Pokémon power wins"
             ),
             inline=False
         )
@@ -255,7 +255,7 @@ class System(commands.Cog):
         embed1.add_field(
             name="💀 DEATHROLL",
             value=(
-                "**Command:** `.deathroll @user 1/3/5`\n"
+                "**Command:** `.deathroll @user 1/3/5/7/9`\n"
                 "**Action:** Roll button\n"
                 "**Goal:** Avoid rolling 1"
             ),
@@ -265,9 +265,9 @@ class System(commands.Cog):
         embed1.add_field(
             name="🎯 CRACK",
             value=(
-                "**Command:** `.crack @user 1/3/5`\n"
+                "**Command:** `.crack @user 1/3/5/7/9`\n"
                 "**Action:** `.guess number`\n"
-                "**Goal:** Guess hidden number"
+                "**Goal:** Find hidden number"
             ),
             inline=False
         )
@@ -277,7 +277,7 @@ class System(commands.Cog):
             value=(
                 "**Command:** `.jackpot`\n"
                 "**Join:** React 🎰\n"
-                "**Mode:** Last player survives"
+                "**Goal:** Last player survives"
             ),
             inline=False
         )
@@ -286,7 +286,7 @@ class System(commands.Cog):
             name="📊 AVERAGE",
             value=(
                 "**Command:** `.average`\n"
-                "**Mode:** Closest to target wins\n"
+                "**Goal:** Closest to target wins\n"
                 "**Twist:** Duplicate numbers lose"
             ),
             inline=False
@@ -357,7 +357,7 @@ class System(commands.Cog):
         )
 
     # ─────────────────────────
-    # STOP
+    # STOP COMMAND
     # ─────────────────────────
 
     @commands.command(name="stop")
@@ -462,7 +462,7 @@ class System(commands.Cog):
             value=(
                 f"**{bar} {percent}%**\n"
                 f"Next: **{next_rank}**\n"
-                f"Need: **{remaining}**"
+                f"Need: **{remaining}** matches"
             ),
             inline=False
         )
