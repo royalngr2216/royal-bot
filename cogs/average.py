@@ -22,10 +22,10 @@ class PickNumberModal(discord.ui.Modal):
         self.guild_id = guild_id
 
         self.number_input = discord.ui.TextInput(
-            label="Choose a number (0 - 1000)",
+            label="Choose a number (1 - 100)",
             placeholder="Enter your number...",
             required=True,
-            max_length=4
+            max_length=3
         )
 
         self.add_item(self.number_input)
@@ -63,10 +63,10 @@ class PickNumberModal(discord.ui.Modal):
             )
 
         # LIMIT
-        if number < 0 or number > 1000:
+        if number < 1 or number > 100:
 
             return await interaction.response.send_message(
-                "❌ Number must be between 0 and 1000.",
+                "❌ Number must be between 1 and 100.",
                 ephemeral=True
             )
 
@@ -205,9 +205,10 @@ class AverageGame(commands.Cog):
         embed.add_field(
             name="📌 Rules",
             value=(
-                "• Choose a number between `0 - 1000`\n"
+                "• Choose a number between `1 - 100`\n"
                 "• Multiplier is revealed before picks\n"
                 "• Duplicate numbers are disqualified\n"
+                "• Extreme targets become `50`\n"
                 "• Inputs stay hidden until reveal"
             ),
             inline=False
@@ -248,7 +249,7 @@ class AverageGame(commands.Cog):
         # WEIGHTED MULTIPLIER
         multiplier = random.choices(
             [0, 0.5, 1, 1.5, 2],
-            weights=[5, 15, 50, 20, 10]
+            weights=[5, 20, 55, 15, 5]
         )[0]
 
         game = {
@@ -393,10 +394,13 @@ class AverageGame(commands.Cog):
 
         average = sum(values) / len(values)
 
-        # USE PRE-ROLLED MULTIPLIER
         multiplier = game["multiplier"]
 
         target = average * multiplier
+
+        # ANTI-EXTREME SYSTEM
+        if target < 5 or target > 100:
+            target = 50
 
         # ─────────────────────────
         # DUPLICATE PENALTY
@@ -553,14 +557,3 @@ class AverageGame(commands.Cog):
         )
 
         del self.active_games[guild_id]
-
-
-# ─────────────────────────
-# LOAD COG
-# ─────────────────────────
-
-async def setup(bot):
-
-    await bot.add_cog(
-        AverageGame(bot)
-    )
