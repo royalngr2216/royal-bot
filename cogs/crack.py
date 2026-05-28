@@ -1,8 +1,9 @@
 from discord.ext import commands
-import random
 import discord
+import random
 
 from utils.game_state import crack_games
+
 from utils.stats import (
     record_win,
     record_loss,
@@ -12,13 +13,18 @@ from utils.stats import (
 from cogs.system import update_roles
 
 
+# ─────────────────────────
+# CRACK COG
+# ─────────────────────────
+
 class Crack(commands.Cog):
 
     def __init__(self, bot):
+
         self.bot = bot
 
     # ─────────────────────────
-    # START GAME
+    # START MATCH
     # ─────────────────────────
 
     @commands.command(name="crack")
@@ -26,93 +32,87 @@ class Crack(commands.Cog):
         self,
         ctx,
         opponent: discord.Member,
-        bo: int,
-        *extra
+        bo: int = 1
     ):
-
-        # OLD FORMAT DETECTION
-        if extra:
-
-            return await ctx.send(
-                "❌ Betting system removed.\n"
-                "Use:\n"
-                "`.crack @user 3`"
-            )
 
         if opponent == ctx.author:
 
             await ctx.send(
-                "You cannot play against yourself."
+                "❌ You cannot play yourself."
             )
-
             return
 
         if bo not in [1, 3, 5, 7, 9]:
 
             await ctx.send(
-                "BO format must be 1, 3, 5, 7, or 9."
+                "❌ BO must be 1, 3, 5, 7, or 9."
             )
-
             return
 
         if ctx.channel.id in crack_games:
 
             await ctx.send(
-                "A crack match is already active in this channel."
+                "❌ A crack game is already active here."
             )
-
             return
 
         wins_required = (bo // 2) + 1
-
-        number = random.randint(1, 100)
-
-        # OWNER REVEAL
-        owner = self.bot.get_user(
-            1287545546231255092
-        )
-
-        if owner:
-
-            try:
-
-                await owner.send(
-                    f"Reveal Number = **{number}**"
-                )
-
-            except:
-                pass
 
         crack_games[ctx.channel.id] = {
 
             "player1": ctx.author,
             "player2": opponent,
 
-            "bo": bo,
-
-            "wins_required": wins_required,
-
             "score1": 0,
             "score2": 0,
 
-            "number": number,
+            "wins_required": wins_required,
+
+            "number": random.randint(1, 100),
 
             "turn": ctx.author
         }
 
-        await ctx.send(
+        embed = discord.Embed(
+            title="🎯 CRACK ARENA",
+            color=discord.Color.blurple()
+        )
 
-            f"🔢 Crack — Best of {bo} Started!\n\n"
-
+        embed.description = (
             f"{ctx.author.mention} ⚔️ "
             f"{opponent.mention}\n\n"
-
             f"🏆 First to "
-            f"{wins_required} wins.\n\n"
-
-            f"{ctx.author.mention} goes first."
-
+            f"**{wins_required}** wins."
         )
+
+        embed.add_field(
+            name="🎮 How To Play",
+            value=(
+                "Use:\n"
+                "` .guess number `\n\n"
+                "Example:\n"
+                "` .guess 50 `"
+            ),
+            inline=False
+        )
+
+        embed.add_field(
+            name="📊 Score",
+            value="# 0 - 0",
+            inline=True
+        )
+
+        embed.add_field(
+            name="🕒 Current Turn",
+            value=ctx.author.mention,
+            inline=True
+        )
+
+        embed.set_footer(
+            text="Hidden Number: 1 - 100"
+        )
+
+        await ctx.send(embed=embed)
 
     # ─────────────────────────
     # GUESS COMMAND
@@ -128,9 +128,8 @@ class Crack(commands.Cog):
         if ctx.channel.id not in crack_games:
 
             await ctx.send(
-                "No active crack match."
+                "❌ No active crack game."
             )
-
             return
 
         game = crack_games[ctx.channel.id]
@@ -138,22 +137,23 @@ class Crack(commands.Cog):
         if ctx.author != game["turn"]:
 
             await ctx.send(
-                "It's not your turn."
+                "❌ It's not your turn."
             )
-
             return
 
-        if not 1 <= number <= 100:
+        if number < 1 or number > 100:
 
             await ctx.send(
-                "Guess must be between 1 and 100."
+                "❌ Guess must be between 1 and 100."
             )
-
             return
 
         target = game["number"]
 
-        # CORRECT
+        # ─────────────────────────
+        # CORRECT GUESS
+        # ─────────────────────────
+
         if number == target:
 
             if ctx.author == game["player1"]:
@@ -164,108 +164,131 @@ class Crack(commands.Cog):
 
                 game["score2"] += 1
 
-            await ctx.send(
-
-                f"🎉 {ctx.author.mention} "
-                f"guessed correctly!\n\n"
-
-                f"📊 Score:\n"
-                f"**{game['score1']}** - "
-                f"**{game['score2']}**"
-
+            embed = discord.Embed(
+                title="🎉 CORRECT GUESS",
+                color=discord.Color.green()
             )
 
-            # NEW ROUND
-            new_number = random.randint(
-                1,
-                100
+            embed.description = (
+                f"{ctx.author.mention} guessed\n"
+                f"# **{target}**"
             )
 
-            owner = self.bot.get_user(
-                1287545546231255092
+            embed.add_field(
+                name="📊 Score",
+                value=(
+                    f"# {game['score1']} - "
+                    f"{game['score2']}"
+                ),
+                inline=False
             )
 
-            if owner:
-
-                try:
-
-                    await owner.send(
-                        f"Reveal Number = **{new_number}**"
-                    )
-
-                except:
-                    pass
-
-            game["number"] = new_number
-
-            game["turn"] = ctx.author
+            await ctx.send(embed=embed)
 
             # MATCH END
+
             if (
-
-                game["score1"]
-                ==
-                game["wins_required"]
-
+                game["score1"] == game["wins_required"]
                 or
-
-                game["score2"]
-                ==
-                game["wins_required"]
-
+                game["score2"] == game["wins_required"]
             ):
 
                 await self.end_match(
-                    ctx.channel.id
+                    ctx.channel
                 )
 
                 return
 
+            # NEW ROUND
+
+            game["number"] = random.randint(
+                1,
+                100
+            )
+
+            embed = discord.Embed(
+                title="🎯 NEW ROUND",
+                color=discord.Color.blurple()
+            )
+
+            embed.description = (
+                f"🕒 {ctx.author.mention} "
+                f"starts again."
+            )
+
+            embed.add_field(
+                name="📊 Score",
+                value=(
+                    f"# {game['score1']} - "
+                    f"{game['score2']}"
+                ),
+                inline=False
+            )
+
+            await ctx.send(embed=embed)
+
             return
 
-        # WRONG
-        hint = (
+        # ─────────────────────────
+        # WRONG GUESS
+        # ─────────────────────────
 
-            "📈 Higher"
+        if number < target:
 
-            if number < target
+            hint = "📈 Go Higher"
 
-            else
+        else:
 
-            "📉 Lower"
+            hint = "📉 Go Lower"
 
-        )
-
-        await ctx.send(
-            f"❌ Wrong guess.\n{hint}"
-        )
-
-        # SWITCH TURN
         game["turn"] = (
 
             game["player1"]
 
-            if ctx.author
-            ==
-            game["player2"]
+            if ctx.author == game["player2"]
 
-            else
+            else game["player2"]
 
-            game["player2"]
         )
+
+        embed = discord.Embed(
+            title="❌ WRONG GUESS",
+            color=discord.Color.red()
+        )
+
+        embed.description = hint
+
+        embed.add_field(
+            name="🎲 Last Guess",
+            value=f"# {number}",
+            inline=True
+        )
+
+        embed.add_field(
+            name="🕒 Current Turn",
+            value=game["turn"].mention,
+            inline=True
+        )
+
+        embed.add_field(
+            name="📊 Score",
+            value=(
+                f"# {game['score1']} - "
+                f"{game['score2']}"
+            ),
+            inline=False
+        )
+
+        await ctx.send(embed=embed)
 
     # ─────────────────────────
     # END MATCH
     # ─────────────────────────
 
-    async def end_match(
-        self,
-        channel_id
-    ):
+    async def end_match(self, channel):
 
-        game = crack_games[channel_id]
+        game = crack_games[channel.id]
 
-        # WINNER
         if game["score1"] > game["score2"]:
 
             winner = game["player1"]
@@ -277,24 +300,12 @@ class Crack(commands.Cog):
             loser = game["player1"]
 
         # SAVE STATS
-        record_win(
-            winner.id,
-            0
-        )
 
-        record_loss(
-            loser.id,
-            0
-        )
+        record_win(winner.id, 0)
+        record_loss(loser.id, 0)
 
-        # UPDATE ROLES
         winner_stats = get_profile(
             winner.id
-        )
-
-        await update_roles(
-            winner,
-            winner_stats["matches"]
         )
 
         loser_stats = get_profile(
@@ -302,48 +313,44 @@ class Crack(commands.Cog):
         )
 
         await update_roles(
+            winner,
+            winner_stats["matches"]
+        )
+
+        await update_roles(
             loser,
             loser_stats["matches"]
         )
 
-        # RESULT EMBED
+        # FINAL EMBED
+
         embed = discord.Embed(
-            title="🔢 CRACK RESULT",
-            color=discord.Color.green()
+            title="👑 CRACK WINNER",
+            color=discord.Color.gold()
         )
 
-        embed.add_field(
-            name="🏆 Winner",
-            value=winner.mention,
-            inline=False
-        )
-
-        embed.add_field(
-            name="💀 Loser",
-            value=loser.mention,
-            inline=False
+        embed.description = (
+            f"🏆 {winner.mention}\n"
+            f"defeated\n"
+            f"💀 {loser.mention}"
         )
 
         embed.add_field(
             name="📊 Final Score",
             value=(
-                f"**{game['score1']}**"
-                f" - "
-                f"**{game['score2']}**"
+                f"# {game['score1']} - "
+                f"{game['score2']}"
             ),
             inline=False
         )
 
-        channel = self.bot.get_channel(
-            channel_id
+        embed.set_footer(
+            text="Crack Arena"
         )
 
-        await channel.send(
-            embed=embed
-        )
+        await channel.send(embed=embed)
 
-        # CLEANUP
-        del crack_games[channel_id]
+        del crack_games[channel.id]
 
 
 async def setup(bot):
