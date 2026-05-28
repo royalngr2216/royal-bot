@@ -1,6 +1,10 @@
 from discord.ext import commands
 import discord
-from utils.stats import get_profile, get_leaderboard
+
+from utils.stats import (
+    get_profile,
+    get_leaderboard
+)
 
 from utils.game_state import (
     crack_games,
@@ -12,7 +16,7 @@ from utils.game_state import (
 )
 
 # ─────────────────────────
-# Role Rewards System
+# ROLE REWARDS
 # ─────────────────────────
 
 ROLE_REWARDS = {
@@ -27,9 +31,14 @@ ROLE_REWARDS = {
 }
 
 
+# ─────────────────────────
+# RANK SYSTEM
+# ─────────────────────────
+
 def get_rank_name(matches):
 
     ranks = [
+
         (500, "👑 Royal"),
         (400, "💎 Casino King"),
         (300, "🔥 Elite"),
@@ -39,6 +48,7 @@ def get_rank_name(matches):
         (20, "⚙️ Grinder"),
         (5, "🌱 Rookie"),
         (0, "👤 Member")
+
     ]
 
     for required, name in ranks:
@@ -50,6 +60,7 @@ def get_rank_name(matches):
 def get_rank_progress(matches):
 
     ranks = [
+
         (0, "Member"),
         (5, "Rookie"),
         (20, "Grinder"),
@@ -59,6 +70,7 @@ def get_rank_progress(matches):
         (300, "Elite"),
         (400, "Casino King"),
         (500, "Royal")
+
     ]
 
     current = (0, "Member")
@@ -71,6 +83,7 @@ def get_rank_progress(matches):
             current = ranks[i]
 
             if i + 1 < len(ranks):
+
                 next_rank = ranks[i + 1]
 
     if not next_rank:
@@ -87,6 +100,7 @@ def get_rank_progress(matches):
     next_req = next_rank[0]
 
     progress = matches - current_req
+
     total_needed = next_req - current_req
 
     percent = int(
@@ -103,13 +117,19 @@ def get_rank_progress(matches):
     remaining = next_req - matches
 
     return (
+
         current[1],
         next_rank[1],
         percent,
         bar,
         remaining
+
     )
 
+
+# ─────────────────────────
+# ROLE UPDATER
+# ─────────────────────────
 
 async def update_roles(member, matches):
 
@@ -142,9 +162,7 @@ async def update_roles(member, matches):
 
         if role and role in member.roles:
 
-            await member.remove_roles(
-                role
-            )
+            await member.remove_roles(role)
 
     await member.add_roles(new_role)
 
@@ -160,6 +178,7 @@ class HelpView(discord.ui.View):
         super().__init__(timeout=120)
 
         self.embeds = embeds
+
         self.current_page = 0
 
     @discord.ui.button(
@@ -167,18 +186,24 @@ class HelpView(discord.ui.View):
         style=discord.ButtonStyle.primary
     )
     async def previous(
+
         self,
         interaction: discord.Interaction,
         button: discord.ui.Button
+
     ):
 
         self.current_page = (
+
             self.current_page - 1
+
         ) % len(self.embeds)
 
         await interaction.response.edit_message(
+
             embed=self.embeds[self.current_page],
             view=self
+
         )
 
     @discord.ui.button(
@@ -186,18 +211,24 @@ class HelpView(discord.ui.View):
         style=discord.ButtonStyle.primary
     )
     async def next(
+
         self,
         interaction: discord.Interaction,
         button: discord.ui.Button
+
     ):
 
         self.current_page = (
+
             self.current_page + 1
+
         ) % len(self.embeds)
 
         await interaction.response.edit_message(
+
             embed=self.embeds[self.current_page],
             view=self
+
         )
 
 
@@ -220,11 +251,14 @@ class System(commands.Cog):
 
         # PAGE 1
         embed1 = discord.Embed(
+
             title="🎮 ROYAL ARENA",
+
             description=(
                 "Navigate using ⬅️ ➡️ buttons\n"
                 "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
             ),
+
             color=discord.Color.from_rgb(
                 0,
                 200,
@@ -237,7 +271,7 @@ class System(commands.Cog):
             value=(
                 "```yaml\n"
                 "Command : .flip\n"
-                "Type    : Coin Flipping Game\n"
+                "Type    : Coin Flip Game\n"
                 "Win     : 50 / 50 chance\n"
                 "```"
             ),
@@ -248,9 +282,9 @@ class System(commands.Cog):
             name="━━━━━━━━━━ 🐉 RANDOMS ━━━━━━━━━━",
             value=(
                 "```yaml\n"
-                "Command : .randoms @user\n"
-                "Action  : Both users type .pick\n"
-                "Result  : Strongest wins\n"
+                "Command : .randoms @user (1/3/5/7/9)\n"
+                "Action  : Both players use .pick\n"
+                "Result  : Strongest Pokémon wins\n"
                 "```"
             ),
             inline=False
@@ -260,8 +294,9 @@ class System(commands.Cog):
             name="━━━━━━━━━━ 💀 DEATHROLL ━━━━━━━━━━",
             value=(
                 "```yaml\n"
-                "Command : .deathroll @user\n"
-                "Mode    : Whoever gets 1 loses\n"
+                "Command : .deathroll @user (1/3/5/7/9)\n"
+                "Action  : Players use .roll\n"
+                "Mode    : Whoever rolls 1 loses\n"
                 "```"
             ),
             inline=False
@@ -271,8 +306,9 @@ class System(commands.Cog):
             name="━━━━━━━━━━ 🔢 CRACK ━━━━━━━━━━",
             value=(
                 "```yaml\n"
-                "Command : .crack @user\n"
-                "Goal    : Closest guess wins\n"
+                "Command : .crack @user (1/3/5/7/9)\n"
+                "Action  : Players use .guess number\n"
+                "Goal    : Guess hidden number first\n"
                 "```"
             ),
             inline=False
@@ -298,7 +334,7 @@ class System(commands.Cog):
                 "Join    : Button UI\n"
                 "Goal    : Closest to target wins\n"
                 "Twist   : Duplicate numbers lose\n"
-                "Range   : 0 - 1000\n"
+                "Range   : 1 - 100\n"
                 "```"
             ),
             inline=False
@@ -310,11 +346,14 @@ class System(commands.Cog):
 
         # PAGE 2
         embed2 = discord.Embed(
+
             title="⚙️ SYSTEM",
+
             description=(
                 "Administrative & Utility Commands\n"
                 "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
             ),
+
             color=discord.Color.from_rgb(
                 255,
                 170,
@@ -392,12 +431,14 @@ class System(commands.Cog):
         stopped = False
 
         for game_dict in [
+
             crack_games,
             randoms_games,
             jackpot_games,
             deathroll_games,
             ongoing_games,
             average_games
+
         ]:
 
             if channel_id in game_dict:
@@ -407,9 +448,13 @@ class System(commands.Cog):
                 stopped = True
 
         await ctx.send(
+
             "🛑 Stopped"
+
             if stopped
+
             else "No active games."
+
         )
 
     # ─────────────────────────
@@ -418,9 +463,11 @@ class System(commands.Cog):
 
     @commands.command(name="profile")
     async def profile(
+
         self,
         ctx,
         member: discord.Member = None
+
     ):
 
         if member is None:
@@ -438,13 +485,17 @@ class System(commands.Cog):
             percent,
             bar,
             remaining
+
         ) = get_rank_progress(
             stats["matches"]
         )
 
         embed = discord.Embed(
+
             title="🎖️ Player Profile",
+
             description=member.display_name,
+
             color=discord.Color.gold()
         )
 
@@ -459,7 +510,7 @@ class System(commands.Cog):
         )
 
         embed.add_field(
-            name="🎲 Bets",
+            name="🎮 Matches",
             value=stats["matches"],
             inline=True
         )
@@ -475,7 +526,7 @@ class System(commands.Cog):
             value=(
                 f"{bar} {percent}%\n"
                 f"⬆️ Next: {next_rank}\n"
-                f"📌 Need: {remaining} bets"
+                f"📌 Need: {remaining} matches"
             ),
             inline=False
         )
@@ -501,7 +552,9 @@ class System(commands.Cog):
             inline=True
         )
 
-        await ctx.send(embed=embed)
+        await ctx.send(
+            embed=embed
+        )
 
     # ─────────────────────────
     # LEADERBOARD
@@ -513,11 +566,14 @@ class System(commands.Cog):
         data = get_leaderboard()
 
         embed = discord.Embed(
+
             title="🏆 Player Leaderboard",
+
             description=(
-                "Top Players by Total Bets\n"
+                "Top Players by Total Matches\n"
                 "━━━━━━━━━━━━━━━━━━━━━━"
             ),
+
             color=discord.Color.gold()
         )
 
@@ -533,23 +589,34 @@ class System(commands.Cog):
             uid,
             matches,
             winrate
+
         ) in enumerate(data):
 
             rank = (
+
                 medals[i]
+
                 if i < 3
+
                 else f"#{i+1}"
+
             )
 
             desc += (
+
                 f"{rank} <@{uid}>\n"
-                f"🎲 Bets: {matches} | "
+
+                f"🎮 Matches: {matches} | "
+
                 f"📊 Win Rate: {winrate}%\n\n"
+
             )
 
         embed.description += f"\n{desc}"
 
-        await ctx.send(embed=embed)
+        await ctx.send(
+            embed=embed
+        )
 
 
 # ─────────────────────────
