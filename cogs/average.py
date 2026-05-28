@@ -206,7 +206,7 @@ class AverageGame(commands.Cog):
             name="📌 Rules",
             value=(
                 "• Choose a number between `0 - 1000`\n"
-                "• Random multiplier every round\n"
+                "• Multiplier is revealed before picks\n"
                 "• Duplicate numbers are disqualified\n"
                 "• Inputs stay hidden until reveal"
             ),
@@ -245,11 +245,18 @@ class AverageGame(commands.Cog):
                 "❌ Need at least 2 players."
             )
 
+        # WEIGHTED MULTIPLIER
+        multiplier = random.choices(
+            [0, 0.5, 1, 1.5, 2],
+            weights=[5, 15, 50, 20, 10]
+        )[0]
+
         game = {
             "players": players,
             "numbers": {},
             "channel": ctx.channel,
-            "board_msg": None
+            "board_msg": None,
+            "multiplier": multiplier
         }
 
         self.active_games[guild.id] = game
@@ -262,7 +269,9 @@ class AverageGame(commands.Cog):
         start_embed = discord.Embed(
             title="🏁 Match Started",
             description=(
-                "Submit your number below."
+                "Submit your number below.\n\n"
+                f"🎲 Multiplier This Round\n"
+                f"## **×{multiplier}**"
             ),
             color=0x57F287
         )
@@ -384,14 +393,8 @@ class AverageGame(commands.Cog):
 
         average = sum(values) / len(values)
 
-        # RANDOM MULTIPLIER
-        multiplier = random.choice([
-            0,
-            0.5,
-            1,
-            1.5,
-            2
-        ])
+        # USE PRE-ROLLED MULTIPLIER
+        multiplier = game["multiplier"]
 
         target = average * multiplier
 
