@@ -557,3 +557,14 @@ class AverageGame(commands.Cog):
         )
 
         del self.active_games[guild_id]
+
+
+# ─────────────────────────
+# LOAD COG
+# ─────────────────────────
+
+async def setup(bot):
+
+    await bot.add_cog(
+        AverageGame(bot)
+        )
