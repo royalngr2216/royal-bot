@@ -480,7 +480,10 @@ class AverageGame(commands.Cog):
                     player
                 )
 
-        # REVEAL TEXT
+        # ─────────────────────────
+        # CLEAN RESULT UI
+        # ─────────────────────────
+
         reveal = ""
 
         for player in players:
@@ -493,39 +496,47 @@ class AverageGame(commands.Cog):
             if number_counts[num] > 1:
 
                 reveal += (
-                    f"• {player.mention}\n"
-                    f"## **{num}** ❌ Duplicate\n\n"
+                    f"{player.mention} ➜ "
+                    f"## **{num}** ❌\n\n"
                 )
 
             else:
 
                 reveal += (
-                    f"• {player.mention}\n"
+                    f"{player.mention} ➜ "
                     f"## **{num}**\n\n"
                 )
 
         results_embed = discord.Embed(
-            title="📊 Results",
-            color=0xEB459E
+            title="📊 RESULTS",
+            color=0xFF1493
         )
 
+        # REVEALED NUMBERS
         results_embed.add_field(
-            name="🎲 Revealed Numbers",
+            name="🎲 REVEALED NUMBERS",
             value=reveal,
             inline=False
         )
 
+        # CALCULATIONS
         results_embed.add_field(
-            name="🧮 Calculations",
+            name="🧮 CALCULATIONS",
             value=(
-                f"📊 Average\n"
+
+                "━━━━━━━━━━━━━━━━━━\n"
+
+                f"📊 Average:\n"
                 f"## **{average:.2f}**\n\n"
 
-                f"🎲 Multiplier\n"
+                f"🎲 Multiplier:\n"
                 f"## **×{multiplier}**\n\n"
 
-                f"🎯 Final Target\n"
-                f"## **{target:.2f}**"
+                f"🎯 Final Target:\n"
+                f"## **{target:.2f}**\n"
+
+                "━━━━━━━━━━━━━━━━━━"
+
             ),
             inline=False
         )
@@ -534,7 +545,7 @@ class AverageGame(commands.Cog):
         if not valid_players:
 
             results_embed.add_field(
-                name="💀 Nobody Won",
+                name="💀 NOBODY WON",
                 value=(
                     "Everyone copied numbers.\n"
                     "No valid winner."
@@ -582,10 +593,10 @@ class AverageGame(commands.Cog):
             ])
 
             results_embed.add_field(
-                name="🤝 Draw",
+                name="🤝 DRAW",
                 value=(
-                    f"{draw_mentions}\n"
-                    f"Equal distance to target."
+                    f"{draw_mentions}\n\n"
+                    f"Closest to **{target:.2f}**"
                 ),
                 inline=False
             )
@@ -596,10 +607,10 @@ class AverageGame(commands.Cog):
             winner = winners[0]
 
             results_embed.add_field(
-                name="🏆 Winner",
+                name="🏆 WINNER",
                 value=(
-                    f"{winner.mention}\n\n"
-                    f"🎯 Closest To\n"
+                    f"👑 {winner.mention}\n\n"
+                    f"Closest to\n"
                     f"## **{target:.2f}**"
                 ),
                 inline=False
@@ -624,4 +635,4 @@ async def setup(bot):
 
     await bot.add_cog(
         AverageGame(bot)
-    )
+        )
