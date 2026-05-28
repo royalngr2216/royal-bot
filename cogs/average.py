@@ -132,7 +132,7 @@ class LobbyView(discord.ui.View):
 
     def __init__(self):
 
-        super().__init__(timeout=20)
+        super().__init__(timeout=10)
 
         self.players = []
 
@@ -151,6 +151,14 @@ class LobbyView(discord.ui.View):
 
             return await interaction.response.send_message(
                 "You already joined.",
+                ephemeral=True
+            )
+
+        # MAX PLAYERS
+        if len(self.players) >= 10:
+
+            return await interaction.response.send_message(
+                "❌ Lobby is full.",
                 ephemeral=True
             )
 
@@ -209,13 +217,13 @@ class AverageGame(commands.Cog):
                 "• Multiplier is revealed before picks\n"
                 "• Duplicate numbers are disqualified\n"
                 "• Extreme targets become `50`\n"
-                "• Inputs stay hidden until reveal"
+                "• AFK players are eliminated"
             ),
             inline=False
         )
 
         embed.set_footer(
-            text="Lobby closes in 20 seconds"
+            text="Lobby closes in 10 seconds"
         )
 
         lobby_view = LobbyView()
@@ -272,7 +280,8 @@ class AverageGame(commands.Cog):
             description=(
                 "Submit your number below.\n\n"
                 f"🎲 Multiplier This Round\n"
-                f"## **×{multiplier}**"
+                f"## **×{multiplier}**\n\n"
+                f"⏰ You have **30 seconds**."
             ),
             color=0x57F287
         )
@@ -294,6 +303,51 @@ class AverageGame(commands.Cog):
         )
 
         game["board_msg"] = board_msg
+
+        # ─────────────────────────
+        # 30 SECOND PICK TIMER
+        # ─────────────────────────
+
+        await asyncio.sleep(30)
+
+        # GAME STILL ACTIVE?
+        if guild.id not in self.active_games:
+            return
+
+        current_game = self.active_games[guild.id]
+
+        # ELIMINATE AFK PLAYERS
+        eliminated = []
+
+        for player in current_game["players"]:
+
+            if player.id not in current_game["numbers"]:
+
+                eliminated.append(
+                    player.mention
+                )
+
+        if eliminated:
+
+            await ctx.send(
+                "💀 Eliminated for not choosing:\n"
+                + "\n".join(eliminated)
+            )
+
+        # NO SUBMISSIONS
+        if len(current_game["numbers"]) == 0:
+
+            await ctx.send(
+                "❌ Nobody submitted a number."
+            )
+
+            del self.active_games[guild.id]
+
+            return
+
+        await self.finish_game(
+            guild.id
+        )
 
     # ─────────────────────────
     # UPDATE BOARD
@@ -402,10 +456,7 @@ class AverageGame(commands.Cog):
         if target < 5 or target > 100:
             target = 50
 
-        # ─────────────────────────
-        # DUPLICATE PENALTY
-        # ─────────────────────────
-
+        # DUPLICATE SYSTEM
         number_counts = {}
 
         for num in values:
@@ -417,6 +468,9 @@ class AverageGame(commands.Cog):
         valid_players = []
 
         for player in players:
+
+            if player.id not in numbers:
+                continue
 
             player_number = numbers[player.id]
 
@@ -430,6 +484,9 @@ class AverageGame(commands.Cog):
         reveal = ""
 
         for player in players:
+
+            if player.id not in numbers:
+                continue
 
             num = numbers[player.id]
 
@@ -567,4 +624,4 @@ async def setup(bot):
 
     await bot.add_cog(
         AverageGame(bot)
-        )
+    )
