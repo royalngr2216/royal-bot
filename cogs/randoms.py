@@ -8,6 +8,7 @@ from utils.stats import (
     record_loss,
     get_profile
 )
+
 from cogs.system import update_roles
 from utils.game_state import randoms_games
 
@@ -27,6 +28,10 @@ class Randoms(commands.Cog):
 
     def __init__(self, bot):
         self.bot = bot
+
+    # ─────────────────────────
+    # START GAME
+    # ─────────────────────────
 
     @commands.command(name="randoms")
     async def randoms(
@@ -70,13 +75,17 @@ class Randoms(commands.Cog):
             description=(
                 f"{ctx.author.mention} ⚔️ "
                 f"{opponent.mention}\n\n"
-                f"🏆 First to {wins_required} wins\n\n"
-                f"🎮 Both players use `.pick`"
+                f"🏆 **First to {wins_required} wins**\n\n"
+                f"🎮 Use `.pick`"
             ),
             color=discord.Color.purple()
         )
 
         await ctx.send(embed=embed)
+
+    # ─────────────────────────
+    # PICK COMMAND
+    # ─────────────────────────
 
     @commands.command(name="pick")
     async def pick(self, ctx):
@@ -104,7 +113,9 @@ class Randoms(commands.Cog):
             )
             return
 
+        # ─────────────────────────
         # SPECIAL PLAYER LUCK
+        # ─────────────────────────
 
         if ctx.author.id in SPECIAL_PLAYERS:
 
@@ -164,7 +175,9 @@ class Randoms(commands.Cog):
             f"sprites/xyani/{clean_name}.gif"
         )
 
+        # ─────────────────────────
         # EMBED COLOR
+        # ─────────────────────────
 
         if pokemon.total_stats < 400:
             embed_color = discord.Color.green()
@@ -175,7 +188,9 @@ class Randoms(commands.Cog):
         else:
             embed_color = discord.Color.red()
 
-        # PICK EMBED
+        # ─────────────────────────
+        # POKEMON EMBED
+        # ─────────────────────────
 
         embed = discord.Embed(
             description=(
@@ -188,37 +203,61 @@ class Randoms(commands.Cog):
         embed.set_image(url=gif_url)
 
         embed.add_field(
+            name="❤️ HP",
+            value=f"**{pokemon.hp}**",
+            inline=True
+        )
+
+        embed.add_field(
             name="⚔️ Attack",
-            value=pokemon.attack,
+            value=f"**{pokemon.attack}**",
             inline=True
         )
 
         embed.add_field(
             name="🛡️ Defense",
-            value=pokemon.defense,
+            value=f"**{pokemon.defense}**",
+            inline=True
+        )
+
+        embed.add_field(
+            name="✨ Sp. Attack",
+            value=f"**{pokemon.sp_attack}**",
+            inline=True
+        )
+
+        embed.add_field(
+            name="🔮 Sp. Defense",
+            value=f"**{pokemon.sp_defense}**",
             inline=True
         )
 
         embed.add_field(
             name="⚡ Speed",
-            value=pokemon.speed,
+            value=f"**{pokemon.speed}**",
             inline=True
         )
 
         embed.add_field(
             name="💥 Total Power",
-            value=f"**{pokemon.total_stats}**",
+            value=f"# **{pokemon.total_stats}**",
             inline=False
         )
 
         await ctx.send(embed=embed)
 
+        # ─────────────────────────
         # BOTH PICKED
+        # ─────────────────────────
 
         if len(game["picks"]) == 2:
             await self.resolve_round(
                 ctx.channel.id
             )
+
+    # ─────────────────────────
+    # ROUND RESULT
+    # ─────────────────────────
 
     async def resolve_round(self, channel_id):
 
@@ -247,7 +286,7 @@ class Randoms(commands.Cog):
         else:
             winner = None
 
-        # ROUND RESULT
+        # ROUND RESULT EMBED
 
         if winner:
 
@@ -282,6 +321,10 @@ class Randoms(commands.Cog):
                 channel_id
             )
 
+    # ─────────────────────────
+    # END MATCH
+    # ─────────────────────────
+
     async def end_match(self, channel_id):
 
         game = randoms_games[channel_id]
@@ -293,6 +336,8 @@ class Randoms(commands.Cog):
         else:
             winner = game["player2"]
             loser = game["player1"]
+
+        # SAVE STATS
 
         record_win(winner.id, 0)
         record_loss(loser.id, 0)
@@ -315,10 +360,12 @@ class Randoms(commands.Cog):
             loser_stats["matches"]
         )
 
+        # RESULT EMBED
+
         embed = discord.Embed(
             description=(
                 f"🏆 {winner.mention} wins the match!\n\n"
-                f"📊 Final Score\n"
+                f"📊 **Final Score**\n"
                 f"# {game['score1']} - {game['score2']}"
             ),
             color=discord.Color.gold()
@@ -334,6 +381,7 @@ class Randoms(commands.Cog):
 
 
 async def setup(bot):
+
     await bot.add_cog(
         Randoms(bot)
     )
