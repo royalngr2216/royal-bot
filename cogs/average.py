@@ -81,7 +81,7 @@ class PickNumberModal(discord.ui.Modal):
         game["numbers"][interaction.user.id] = number
 
         await interaction.response.send_message(
-            f"🔒 Locked in: `{number}`",
+            f"🔒 Locked in: **{number}**",
             ephemeral=True
         )
 
@@ -206,7 +206,7 @@ class AverageGame(commands.Cog):
             name="📌 Rules",
             value=(
                 "• Choose a number between `0 - 1000`\n"
-                "• Multiplier is random every round\n"
+                "• Random multiplier every round\n"
                 "• Duplicate numbers are disqualified\n"
                 "• Inputs stay hidden until reveal"
             ),
@@ -429,15 +429,15 @@ class AverageGame(commands.Cog):
             if number_counts[num] > 1:
 
                 reveal += (
-                    f"> {player.mention} → "
-                    f"`{num}` ❌ Duplicate\n"
+                    f"• {player.mention}\n"
+                    f"## **{num}** ❌ Duplicate\n\n"
                 )
 
             else:
 
                 reveal += (
-                    f"> {player.mention} → "
-                    f"`{num}`\n"
+                    f"• {player.mention}\n"
+                    f"## **{num}**\n\n"
                 )
 
         results_embed = discord.Embed(
@@ -454,9 +454,14 @@ class AverageGame(commands.Cog):
         results_embed.add_field(
             name="🧮 Calculations",
             value=(
-                f"> Average: `{average:.2f}`\n"
-                f"> Multiplier: `×{multiplier}`\n"
-                f"> Final Target: `{target:.2f}`"
+                f"📊 Average\n"
+                f"## **{average:.2f}**\n\n"
+
+                f"🎲 Multiplier\n"
+                f"## **×{multiplier}**\n\n"
+
+                f"🎯 Final Target\n"
+                f"## **{target:.2f}**"
             ),
             inline=False
         )
@@ -529,9 +534,9 @@ class AverageGame(commands.Cog):
             results_embed.add_field(
                 name="🏆 Winner",
                 value=(
-                    f"{winner.mention}\n"
-                    f"Closest to "
-                    f"`{target:.2f}`"
+                    f"{winner.mention}\n\n"
+                    f"🎯 Closest To\n"
+                    f"## **{target:.2f}**"
                 ),
                 inline=False
             )
@@ -555,4 +560,4 @@ async def setup(bot):
 
     await bot.add_cog(
         AverageGame(bot)
-            )
+    )
